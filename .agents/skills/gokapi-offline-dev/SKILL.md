@@ -157,3 +157,81 @@ python scripts/check-i18n-keys.py .
 ```bash
 cd build/go-generate && $GO run -tags tools updateEnvVariables.go
 ```
+
+## 6. Docker Compose 部署（本机实战）
+
+### 6.1 先改这三处，否则踩坑
+
+| 文件 | 为什么 |
+|---|---|
+| `docker-compose.yaml` | 上游默认 `image: f0rc3/gokapi:latest`，拉的是**上游预构建镜像**，看不到本仓库改动。必须加 `build: {context: ., args: {GOPROXY: ...}}` 并从本地构建 |
+| `Dockerfile` | 加 `ARG GOPROXY` + `ENV GOPROXY GOTOOLCHAIN=local`，否则容器内 `go generate ./...` 拉不到依赖 |
+| `.dockerignore`（新建） | 不加的话 `COPY . /compile` 会带上 `gokapi-data/` `gokapi-config/`；容器一写数据就污染构建缓存，下次 build 全量重来 |
+
+### 6.2 CRLF 会打断容器启动（本机高频坑）
+
+git `autocrlf` 把 `dockerentry.sh` checkout 成 CRLF，shebang 变成 `#!/bin/sh\r`，内核去找名为 `/bin/sh\r` 的解释器 → 容器无限重启：
+
+```
+[FATAL tini (7)] exec /app/run.sh failed: No such file or directory
+```
+
+**诊断**：`head -1 dockerentry.sh | od -c` 看行尾是不是 `\r \n`；`git show HEAD:dockerentry.sh | od -c` 对比（git 里应是 LF）。
+
+**修复（三件套一起做）**：
+1. 新建 `.gitattributes`：`*.sh text eol=lf` + `Dockerfile text eol=lf`
+2. 把工作区文件转成 LF（`python -c "..."` 或 `tr -d '\r'`）。转完 `git hash-object` 应与 `git rev-parse HEAD:<file>` 相同；`git status` 可能仍显示 `M`，那只是 stat 缓存，`git diff` 为空即无差异。
+3. Dockerfile 里加兜底：`RUN sed -i 's/\r$//' /app/run.sh && chmod +x /app/run.sh`
+
+### 6.3 网络
+
+- `auth.docker.io` 偶发 `Bad Gateway`（拉基础镜像时 `failed to fetch anonymous token`）→ **先直接重试**，通常是瞬时故障。
+- 本机需要 `golang:1.26.2-alpine` + `alpine:3.23`。可用加速源 `docker.m.daocloud.io` / `dockerproxy.net` / `docker.1ms.run`（`registry.cn-hangzhou.aliyuncs.com` 在本机不通）。
+- 容器内 `apk add` 走 `dl-cdn.alpinelinux.org`，本机可用。
+
+### 6.4 跳过 Setup 向导（否则首屏是未美化的向导页）
+
+首次启动若 `config/config.json` 不存在，会进 Web 向导（`/setup`，用的是 `internal/configuration/setup/templates` 里那套**独立、未 i18n/未套主题**的模板）。想直接看到新版登录页，就预置配置：
+
+1. 用仓库自带的 `cmd/seedconfig`（**必须放在模块内，`internal/...` 不能被外部模块 import**，所以它是个常驻命令而不是外部脚本）。在**宿主机**从仓库根跑，生成 `./gokapi-config/config.json` + `./gokapi-data/gokapi.sqlite`：
+
+   ```bash
+   GOKAPI_CONFIG_DIR=gokapi-config \
+   GOKAPI_DATA_DIR=gokapi-data \
+   SEED_DATABASE_URL="sqlite://gokapi-data/gokapi.sqlite" \
+   go run ./cmd/seedconfig
+   ```
+2. 宿主与容器路径不同，必须改写 3 个字段：
+   - `DataDir`: `gokapi-data` → `/app/data`
+   - `DatabaseUrl`: `sqlite://gokapi-data/gokapi.sqlite` → `sqlite:///app/data/gokapi.sqlite`
+   - `RedirectUrl`: 向导默认是**外部 URL**；写 `/index` 会让 index 页重定向到自己（死循环），demo 用 `/admin`
+3. 对 sqlite 跑 `PRAGMA wal_checkpoint(TRUNCATE)`，避免留下 `-wal`/`-shm`。
+4. 种子超管**故意不叫 `admin`**，这样内置账号 admin/admin1234、user/user1234 仍会在首次启动时被创建出来，方便演示。
+
+`Encryption.Level = 0`（NoEncryption）时不需要 Cipher/Salt 任何字段，配置很容易手写。
+
+### 6.5 验证清单
+
+```bash
+docker compose build && docker compose up -d
+docker compose logs --tail=40          # 期望看到 "Created built-in user: admin/user"
+docker inspect --format '{{.State.Health.Status}}' gokapi   # healthy
+curl -s http://localhost:53842/index   # meta refresh -> /admin
+curl -s -b 'gokapi_language=zh-CN' http://localhost:53842/login | grep 忘记密码
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:53842/css/theme.css   # 200
+```
+
+登录后（cookie jar）验证短 ID 端到端：
+
+```bash
+CSRF=$(curl -s -c /tmp/cj.txt http://localhost:53842/login | grep -oE 'value="[^"]+"' | head -1 | sed 's/value="//;s/"//')
+curl -s -b /tmp/cj.txt -c /tmp/cj.txt -X POST http://localhost:53842/login \
+  -d username=admin -d password=admin1234 --data-urlencode "csrf-token=$CSRF"
+KEY=$(curl -s -b /tmp/cj.txt -H 'permission: PERM_UPLOAD' http://localhost:53842/auth/token | python -c 'import sys,json;print(json.load(sys.stdin)["key"])')
+echo hi > /tmp/f.txt
+curl -s -X POST http://localhost:53842/api/files/add -H "apikey: $KEY" -F file=@/tmp/f.txt
+# -> {"FileInfo":{"Id":"HbwhVuiF",...}}  8 位即 short 模式生效
+```
+
+注意：默认每个上传只能下载 1 次，用 `downloadFile?id=...` 拉过一次后该文件就从 `/admin` 列表消失了（不是 bug）。
+

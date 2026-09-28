@@ -1,7 +1,29 @@
 // Command seedconfig provisions a ready-to-use Gokapi configuration without the
-// interactive web setup wizard. Used for local / docker-compose deployments.
+// interactive web setup wizard (which serves its own, un-themed template set).
+// Used for local / docker-compose deployments where you want to land straight on
+// the login page.
 //
-// TEMPORARY TOOL - delete this directory after the deployment has been seeded.
+// Run it from the repository root:
+//
+//	GOKAPI_CONFIG_DIR=gokapi-config \
+//	GOKAPI_DATA_DIR=gokapi-data \
+//	SEED_DATABASE_URL="sqlite://gokapi-data/gokapi.sqlite" \
+//	go run ./cmd/seedconfig
+//
+// The super admin created here is deliberately NOT called "admin", so that the
+// built-in accounts (admin/admin1234, user/user1234) are still created on the
+// first application start.
+//
+// When the generated configuration is consumed inside a container, the paths have
+// to be rewritten afterwards, because the host paths differ from the container ones:
+//
+//	DataDir      : "gokapi-data"                        -> "/app/data"
+//	DatabaseUrl  : "sqlite://gokapi-data/gokapi.sqlite" -> "sqlite:///app/data/gokapi.sqlite"
+//	RedirectUrl  : "/admin"  (the setup wizard default is an EXTERNAL url;
+//	                          "/index" would make the index page redirect to itself)
+//
+// Finally run `PRAGMA wal_checkpoint(TRUNCATE)` on the sqlite file so no -wal/-shm
+// side cars are left behind.
 //
 // Environment variables (all optional, sensible defaults for docker compose):
 //
