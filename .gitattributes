@@ -1,0 +1,9 @@
+# Shell scripts must always be checked out with LF line endings.
+# With CRLF the shebang becomes "#!/bin/sh\r", the kernel then looks for an
+# interpreter literally named "/bin/sh\r" and exec fails with ENOENT
+# (tini: exec /app/run.sh failed: No such file or directory).
+*.sh text eol=lf
+
+# Keep container build/run definitions on LF as well
+Dockerfile text eol=lf
+Dockerfile.* text eol=lf

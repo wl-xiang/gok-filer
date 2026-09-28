@@ -3,6 +3,12 @@ FROM golang:1.26.2-alpine AS build_base
 ## Usage:
 ## docker build . -t gokapi
 ## docker run -it -v gokapi-data:/app/data -v gokapi-config:/app/config -p 127.0.0.1:53842:53842 gokapi
+##
+## GOPROXY can be overridden for networks that cannot reach proxy.golang.org:
+## docker build . --build-arg GOPROXY=https://goproxy.cn,direct
+
+ARG GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=${GOPROXY} GOTOOLCHAIN=local
 
 RUN mkdir /compile && apk update && apk add --no-cache git
 COPY . /compile
@@ -15,6 +21,10 @@ RUN addgroup -S gokapi && adduser -S gokapi -G gokapi
 RUN apk update && apk add --no-cache su-exec tini ca-certificates curl tzdata && \
 	 mkdir /app && touch /app/.isdocker
 COPY dockerentry.sh /app/run.sh
+# Normalise line endings and make sure the script is executable. Without this a
+# CRLF checkout (git autocrlf on Windows) produces a "#!/bin/sh\r" shebang and
+# tini fails with: exec /app/run.sh failed: No such file or directory
+RUN sed -i 's/\r$//' /app/run.sh && chmod +x /app/run.sh
 
 COPY --from=build_base /compile/gokapi /app/gokapi
 WORKDIR /app

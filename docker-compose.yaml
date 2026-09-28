@@ -1,6 +1,13 @@
 services:
   gokapi:
-    image: f0rc3/gokapi:latest
+    # Build from the local source tree so the deployed container contains THIS
+    # repository's code (the published f0rc3/gokapi image would not).
+    build:
+      context: .
+      args:
+        # Override with GOPROXY=... in .env if proxy.golang.org is unreachable
+        GOPROXY: ${GOPROXY:-https://goproxy.cn,direct}
+    image: gokapi-local:latest
     container_name: gokapi
     ports:
       - "127.0.0.1:53842:53842"

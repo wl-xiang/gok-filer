@@ -1,0 +1,28 @@
+# Keep the build context small and, more importantly, keep runtime data out of it.
+# Otherwise every file written to ./gokapi-data or ./gokapi-config by the running
+# container would invalidate the "COPY . /compile" layer and force a full rebuild.
+
+# Local deployment state
+gokapi-data/
+gokapi-config/
+gokapi
+gokapi-cli
+gokapi-cli.json
+.env
+*.secret
+custom/
+
+# Generated wasm modules (recreated by `go generate` during the image build)
+internal/webserver/web/main.wasm
+internal/webserver/web/e2e.wasm
+
+# VCS / tooling / editor state
+.git
+.idea/
+.workbuddy/
+.agents/
+.vendor/
+
+# Local build output
+docs/_build
+build/*.zip

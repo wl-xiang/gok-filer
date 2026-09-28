@@ -16,5 +16,7 @@ custom/
 *.secret
 gokapi-cli
 gokapi-cli.json
+gokapi-data/
+gokapi-config/
 
 .workbuddy/
