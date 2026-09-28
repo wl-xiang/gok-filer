@@ -61,6 +61,7 @@ func main() {
 	}
 
 	setDeploymentPassword(passedFlags)
+	configuration.InitializeBuiltinUsers()
 	checkIfUserExists()
 	encryption.Init(*configuration.Get())
 	authentication.Init(configuration.Get().Authentication)

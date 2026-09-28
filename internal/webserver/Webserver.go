@@ -17,6 +17,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,6 +30,7 @@ import (
 	"github.com/forceu/gokapi/internal/encryption"
 	"github.com/forceu/gokapi/internal/environment"
 	"github.com/forceu/gokapi/internal/helper"
+	"github.com/forceu/gokapi/internal/i18n"
 	"github.com/forceu/gokapi/internal/logging"
 	"github.com/forceu/gokapi/internal/logging/serverstats"
 	"github.com/forceu/gokapi/internal/models"
@@ -79,8 +81,10 @@ var wasmE2EFile embed.FS
 const timeOutWebserverRead = 2 * time.Hour
 const timeOutWebserverWrite = 12 * time.Hour
 
-// templateFolder contains all parsed templates
-var templateFolder *template.Template
+// templateFolders contains all parsed templates, keyed by language code. Each language has its
+// own template set with the translation functions bound to that language, which keeps rendering
+// race-free for concurrent requests.
+var templateFolders map[string]*template.Template
 
 // customStaticInfo is passed to all templates, so custom CSS or JS can be embedded
 var customStaticInfo customStatic
@@ -121,6 +125,7 @@ func Start() {
 	mux.HandleFunc("/logs", requireLogin(showLogs, true, false))
 	mux.HandleFunc("/logout", doLogout)
 	mux.HandleFunc("/publicUpload", showPublicUpload)
+	mux.HandleFunc("/setLanguage", setLanguage)
 	mux.HandleFunc("/uploadChunk", requireLogin(uploadChunk, false, false))
 	mux.HandleFunc("/uploadStatus", requireLogin(sse.GetStatusSSE, false, false))
 	mux.HandleFunc("/users", requireLogin(showUserAdmin, true, false))
@@ -204,23 +209,74 @@ func Shutdown() {
 	}
 }
 
-// Initialises the templateFolder variable by scanning through all the templates.
+// Initialises the templateFolders variable by scanning through all the templates.
+// A separate template set is created for every supported language, so that all phrases can be
+// looked up via the "tr" function without sharing mutable state between requests.
 // If a folder "templates" exists in the main directory, it is used.
 // Otherwise, templateFolderEmbedded will be used.
 func initTemplates(templateFolderEmbedded embed.FS) {
 	var err error
+	err = i18n.Init()
+	helper.Check(err)
 
-	funcMap := template.FuncMap{
-		"newAdminButtonContext": newAdminButtonContext,
-	}
-	if helper.FolderExists("templates") {
+	useLocalFolder := helper.FolderExists("templates")
+	if useLocalFolder {
 		fmt.Println("Found folder 'templates', using local folder instead of internal template folder")
-		templateFolder, err = template.New("").Funcs(funcMap).ParseGlob("templates/*.tmpl")
-		helper.Check(err)
-	} else {
-		templateFolder, err = template.New("").Funcs(funcMap).ParseFS(templateFolderEmbedded, "web/templates/*.tmpl")
+	}
+	templateFolders = make(map[string]*template.Template)
+	for _, language := range i18n.SupportedLanguages() {
+		languageCode := language.Code
+		funcMap := template.FuncMap{
+			"newAdminButtonContext": newAdminButtonContext,
+			"tr":                    i18n.Translator(languageCode),
+			"trf":                   i18n.TranslatorFormat(languageCode),
+			"availableLanguages":    i18n.SupportedLanguages,
+			"currentLanguage":       func() string { return languageCode },
+		}
+		if useLocalFolder {
+			templateFolders[languageCode], err = template.New("").Funcs(funcMap).ParseGlob("templates/*.tmpl")
+		} else {
+			templateFolders[languageCode], err = template.New("").Funcs(funcMap).ParseFS(templateFolderEmbedded, "web/templates/*.tmpl")
+		}
 		helper.Check(err)
 	}
+}
+
+// renderTemplate executes the template with the given name using the language selected by the
+// request. It replaces the previous direct calls to templateFolder.ExecuteTemplate.
+func renderTemplate(w http.ResponseWriter, r *http.Request, name string, data any) error {
+	templateSet, ok := templateFolders[i18n.FromRequest(r)]
+	if !ok {
+		templateSet = templateFolders[i18n.DefaultLanguage]
+	}
+	return templateSet.ExecuteTemplate(w, name, data)
+}
+
+// Handling of /setLanguage - stores the language selected by the user in a cookie and redirects
+// back to the page the user came from. Only same-host referrers are accepted to prevent open
+// redirects.
+func setLanguage(w http.ResponseWriter, r *http.Request) {
+	languageCode := r.URL.Query().Get("lang")
+	i18n.WriteLanguageCookie(w, languageCode)
+	http.Redirect(w, r, languageRedirectTarget(r), http.StatusTemporaryRedirect)
+}
+
+// languageRedirectTarget returns the path the language switcher should redirect to. If no valid
+// same-host referrer is present, the admin menu is used.
+func languageRedirectTarget(r *http.Request) string {
+	referer := r.Header.Get("Referer")
+	if referer == "" {
+		return "./admin"
+	}
+	parsed, err := url.Parse(referer)
+	if err != nil || parsed.Host != r.Host || !strings.HasPrefix(parsed.Path, "/") {
+		return "./admin"
+	}
+	target := parsed.Path
+	if parsed.RawQuery != "" {
+		target += "?" + parsed.RawQuery
+	}
+	return target
 }
 
 // Sends a redirect HTTP output to the client. Variable url is used to redirect to ./url
@@ -254,7 +310,7 @@ func redirectFromFilename(w http.ResponseWriter, r *http.Request) {
 	}
 
 	config := configuration.Get()
-	err := templateFolder.ExecuteTemplate(w, "redirect_filename", redirectValues{
+	err := renderTemplate(w, r, "redirect_filename", redirectValues{
 		FileId:           id,
 		RedirectUrl:      "d",
 		Name:             file.Name,
@@ -290,7 +346,7 @@ func doLogout(w http.ResponseWriter, r *http.Request) {
 
 // Handling of /index and redirecting to globalConfig.RedirectUrl
 func showIndex(w http.ResponseWriter, r *http.Request) {
-	err := templateFolder.ExecuteTemplate(w, "index", genericView{RedirectUrl: configuration.Get().RedirectUrl,
+	err := renderTemplate(w, r, "index", genericView{RedirectUrl: configuration.Get().RedirectUrl,
 		PublicName:    configuration.Get().PublicName,
 		CustomContent: customStaticInfo})
 	helper.CheckIgnoreTimeout(err)
@@ -351,7 +407,7 @@ func changePassword(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	config := configuration.Get()
-	err = templateFolder.ExecuteTemplate(w, "changepw",
+	err = renderTemplate(w, r, "changepw",
 		genericView{PublicName: config.PublicName,
 			MinPasswordLength: configuration.GetEnvironment().MinLengthPassword,
 			ErrorMessage:      errMessage,
@@ -399,7 +455,7 @@ func showError(w http.ResponseWriter, r *http.Request) {
 		displayedError.CardWidth = "25rem"
 	}
 
-	err := templateFolder.ExecuteTemplate(w, "error", genericView{
+	err := renderTemplate(w, r, "error", genericView{
 		ErrorId:           displayedError.ErrorId,
 		ErrorCardWidth:    displayedError.CardWidth,
 		IsGenericError:    displayedError.IsGeneric,
@@ -413,7 +469,7 @@ func showError(w http.ResponseWriter, r *http.Request) {
 
 // Handling of /forgotpw
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
-	err := templateFolder.ExecuteTemplate(w, "forgotpw", genericView{
+	err := renderTemplate(w, r, "forgotpw", genericView{
 		PublicName:    configuration.Get().PublicName,
 		CustomContent: customStaticInfo})
 	helper.CheckIgnoreTimeout(err)
@@ -431,7 +487,7 @@ func showUploadRequest(w http.ResponseWriter, r *http.Request) {
 		redirect(w, r, "admin")
 		return
 	}
-	err = templateFolder.ExecuteTemplate(w, "uploadreq", view)
+	err = renderTemplate(w, r, "uploadreq", view)
 	helper.CheckIgnoreTimeout(err)
 }
 
@@ -449,7 +505,7 @@ func showApiAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = templateFolder.ExecuteTemplate(w, "api", view)
+	err = renderTemplate(w, r, "api", view)
 	helper.CheckIgnoreTimeout(err)
 }
 
@@ -465,7 +521,7 @@ func showUserAdmin(w http.ResponseWriter, r *http.Request) {
 		redirect(w, r, "admin")
 		return
 	}
-	err = templateFolder.ExecuteTemplate(w, "users", view)
+	err = renderTemplate(w, r, "users", view)
 	helper.CheckIgnoreTimeout(err)
 }
 
@@ -528,7 +584,7 @@ func showLogin(w http.ResponseWriter, r *http.Request) {
 		failedCsrf = !validCsfr
 		failedLogin = true
 	}
-	err = templateFolder.ExecuteTemplate(w, "login", LoginView{
+	err = renderTemplate(w, r, "login", LoginView{
 		IsFailedLogin: failedLogin,
 		IsFailedCsfr:  failedCsrf,
 		User:          user,
@@ -593,7 +649,7 @@ func showDownload(w http.ResponseWriter, r *http.Request) {
 		enteredPassword := r.PostForm.Get("password")
 		if enteredPassword == "" {
 			view.IsPasswordView = true
-			err := templateFolder.ExecuteTemplate(w, "download_password", view)
+			err := renderTemplate(w, r, "download_password", view)
 			helper.CheckIgnoreTimeout(err)
 			return
 		}
@@ -616,12 +672,12 @@ func showDownload(w http.ResponseWriter, r *http.Request) {
 		}
 		view.IsFailedLogin = true
 		view.IsPasswordView = true
-		err := templateFolder.ExecuteTemplate(w, "download_password", view)
+		err := renderTemplate(w, r, "download_password", view)
 		helper.CheckIgnoreTimeout(err)
 		return
 	}
 
-	err := templateFolder.ExecuteTemplate(w, "download", view)
+	err := renderTemplate(w, r, "download", view)
 	helper.CheckIgnoreTimeout(err)
 }
 
@@ -680,7 +736,7 @@ func showAdminMenu(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = templateFolder.ExecuteTemplate(w, "admin", view)
+	err = renderTemplate(w, r, "admin", view)
 	helper.CheckIgnoreTimeout(err)
 }
 
@@ -696,7 +752,7 @@ func showLogs(w http.ResponseWriter, r *http.Request) {
 		redirect(w, r, "admin")
 		return
 	}
-	err = templateFolder.ExecuteTemplate(w, "logs", view)
+	err = renderTemplate(w, r, "logs", view)
 	helper.CheckIgnoreTimeout(err)
 }
 
@@ -711,7 +767,7 @@ func showE2ESetup(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	e2einfo := database.GetEnd2EndInfo(user.Id)
-	err = templateFolder.ExecuteTemplate(w, "e2esetup", e2ESetupView{
+	err = renderTemplate(w, r, "e2esetup", e2ESetupView{
 		HasBeenSetup:  e2einfo.HasBeenSetUp(),
 		PublicName:    configuration.Get().PublicName,
 		CustomContent: customStaticInfo})
@@ -992,7 +1048,7 @@ func showPublicUpload(w http.ResponseWriter, r *http.Request) {
 		CustomContent: customStaticInfo,
 	}
 
-	err := templateFolder.ExecuteTemplate(w, "publicUpload", view)
+	err := renderTemplate(w, r, "publicUpload", view)
 	helper.CheckIgnoreTimeout(err)
 }
 

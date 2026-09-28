@@ -8,7 +8,7 @@
 		    <div class="col">
 		    </div>
 		    <div class="col text-center">
-		      <h3 class="card-title mb-0">File Requests</h3>
+		      <h3 class="card-title mb-0">{{ tr "fr.title" }}</h3>
 		    </div>
 		    <div class="col text-end">
 		      <button id="button-newfr" class="btn btn-outline-light" onclick="newFileRequest()">
@@ -23,15 +23,15 @@
                     <table class="table table-dark ">
                         <thead>
                             <tr>
-                                <th scope="col">Name</th>
-                                <th scope="col">Uploaded Files</th>
-                                <th scope="col">Total Size</th>
-                                <th scope="col">Last Upload</th>
-                                <th scope="col">Expiry</th>
+                                <th scope="col">{{ tr "fr.table.name" }}</th>
+                                <th scope="col">{{ tr "fr.table.uploadedFiles" }}</th>
+                                <th scope="col">{{ tr "fr.table.totalSize" }}</th>
+                                <th scope="col">{{ tr "fr.table.lastUpload" }}</th>
+                                <th scope="col">{{ tr "fr.table.expiry" }}</th>
 {{ if .ActiveUser.HasPermissionListOtherUploads }}
-            			<th scope="col">User</th>
+            			<th scope="col">{{ tr "fr.table.user" }}</th>
 {{ end }}
-                                <th scope="col" class="text-end">Actions</th>
+                                <th scope="col" class="text-end">{{ tr "fr.table.actions" }}</th>
                             </tr>
                         </thead>
                         <tbody id="filerequesttable">
@@ -42,7 +42,7 @@
 				    {{ template "uRFileCell" . }}
 		                    <td>{{ .GetReadableTotalSize }}</td>
             			    <td><span id="cell-lastupdate-{{ .Id }}"></span></td>
-				       <script>insertDateWithNegative({{ .LastUpload }}, "cell-lastupdate-{{ .Id }}", "None");</script>
+				       <script>insertDateWithNegative({{ .LastUpload }}, "cell-lastupdate-{{ .Id }}", "{{ tr "fr.none" }}");</script>
             			    <td><span id="cell-expiry-{{ .Id }}"></span></td>
 				       <script>insertFileRequestExpiry({{ .Expiry }}, "cell-expiry-{{ .Id }}");</script>
 		                    
@@ -55,13 +55,13 @@
                                 {{ template "uRDownloadbutton" . }}
                                 
                                 
-                                <button id="copy-{{ .Id }}" type="button" data-clipboard-text="{{ $.ServerUrl }}publicUpload?id={{ .Id }}&key={{ .ApiKey }}" class="copyurl btn btn-outline-light btn-sm" onclick="showToast(1000);" title="Copy URL"><i class="bi bi-copy"></i></button>
+                                <button id="copy-{{ .Id }}" type="button" data-clipboard-text="{{ $.ServerUrl }}publicUpload?id={{ .Id }}&key={{ .ApiKey }}" class="copyurl btn btn-outline-light btn-sm" onclick="showToast(1000);" title="{{ tr "fr.tooltip.copyUrl" }}"><i class="bi bi-copy"></i></button>
                                 
-		                        <button id="edit-{{ .Id }}" type="button" title="Edit request" class="btn btn-outline-light btn-sm" onclick="editFileRequest('{{ .Id }}', '{{ .Name }}', {{ .MaxFiles }}, {{ .MaxSize }}, {{ .Expiry }}, '{{ .Notes }}')">
+		                        <button id="edit-{{ .Id }}" type="button" title="{{ tr "fr.tooltip.edit" }}" class="btn btn-outline-light btn-sm" onclick="editFileRequest('{{ .Id }}', '{{ .Name }}', {{ .MaxFiles }}, {{ .MaxSize }}, {{ .Expiry }}, '{{ .Notes }}')">
 		                        	<i class="bi bi-pencil"></i></button>
                                 
                                 
-                                <button id="delete-{{ .Id }}" type="button" class="btn btn-outline-danger btn-sm" onclick="deleteOrShowModal('{{ .Id }}', '{{ .Name }}', {{ .UploadedFiles }})" title="Delete"><i class="bi bi-trash3"></i></button>
+                                <button id="delete-{{ .Id }}" type="button" class="btn btn-outline-danger btn-sm" onclick="deleteOrShowModal('{{ .Id }}', '{{ .Name }}', {{ .UploadedFiles }})" title="{{ tr "fr.tooltip.delete" }}"><i class="bi bi-trash3"></i></button>
                                 	</div>
                                 	</div>
                                 </td>
@@ -94,7 +94,7 @@
 					
 					<button id="button-delete-{{ .Id}}"
 					   type="button"
-					   title="Delete"
+					   title="{{ tr "fr.tooltip.delete" }}"
 					    {{ if and (ne $.ActiveUser.Id .UserId) (not $.ActiveUser.HasPermissionDeleteOtherUploads) }}
 					    	disabled
 					    {{ end }}
@@ -116,10 +116,10 @@
                 </div>
             </div>
         </div>
-	<div id="toastnotification" class="toastnotification" data-default="URL copied to clipboard">Toast Text</div>
+	<div id="toastnotification" class="toastnotification" data-default="{{ tr "fr.toast.urlCopied" }}">Toast Text</div>
 	<div id="toastnotificationUndo" class="toastnotification">
-	  File deleted: <span id="toastFilename"></span>
-  	   <span id="toastUndoButton" class="toast-undo" onclick="handleUndoFr(this)">Restore</span>
+	  {{ tr "fr.toast.fileDeleted" }} <span id="toastFilename"></span>
+  	   <span id="toastUndoButton" class="toast-undo" onclick="handleUndoFr(this)">{{ tr "fr.toast.restore" }}</span>
 	</div>
     </div>
 </div>
@@ -151,15 +151,15 @@
 	  <div class="modal-dialog gokapi-dialog">
 	    <div class="modal-content gokapi-dialog">
 	      <div class="modal-header">
-		<h5 class="modal-title">Delete File Request</h5>
+		<h5 class="modal-title">{{ tr "fr.modal.delete.title" }}</h5>
 	      </div>
 	      <div class="modal-body">
-		<p>Are you sure you want to delete the filerequest &quot;<span id="deleteModalBodyName" class="fw-bold"></span>&quot;?<br><br>
-		This also permanently deletes <span id="deleteModalBodyCount" class="fw-bold"></span> associated file(s) and cannot be undone.</p>
+		<p>{{ tr "fr.modal.delete.question" }} &quot;<span id="deleteModalBodyName" class="fw-bold"></span>&quot;?<br><br>
+		{{ tr "fr.modal.delete.warning" }} <span id="deleteModalBodyCount" class="fw-bold"></span> {{ tr "fr.modal.delete.warningSuffix" }}</p>
 		</div>
 	      <div class="modal-footer">
-		<button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
-		<button type="button" id="buttonDelete" class="btn btn-danger">Delete</button>
+		<button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">{{ tr "common.cancel" }}</button>
+		<button type="button" id="buttonDelete" class="btn btn-danger">{{ tr "fr.modal.delete.confirm" }}</button>
 	      </div>
 	    </div>
 	  </div>
@@ -172,7 +172,7 @@
 	  <div class="modal-dialog  modal-lg gokapi-dialog">
 	    <div class="modal-content gokapi-dialog">
 	      <div class="modal-header">
-		<h1 class="modal-title fs-5" id="m_urequestlabel">Title</h1>
+		<h1 class="modal-title fs-5" id="m_urequestlabel">{{ tr "fr.modal.edit.title" }}</h1>
 	      </div>
 	      <div class="modal-body">
 		<div class="input-group mb-3">
@@ -180,15 +180,15 @@
 	     	 <div class="input-group-text">
   			<input type="checkbox" style="visibility: hidden" aria-hidden="true">
 		</div>
-		  <span class="input-group-text modal-samesize-input-filerequest" id="mTitle">Title</span>
-		  <input type="text" id="mFriendlyName" class="form-control" placeholder="Friendly name" aria-label="Friendly name" aria-describedby="mTitle">
+		  <span class="input-group-text modal-samesize-input-filerequest" id="mTitle">{{ tr "fr.modal.edit.title" }}</span>
+		  <input type="text" id="mFriendlyName" class="form-control" placeholder="{{ tr "fr.modal.edit.friendlyName" }}" aria-label="Friendly name" aria-describedby="mTitle">
 		</div>
 
 		<div class="input-group mb-3">
 		  <div class="input-group-text">
       			<input type="checkbox" id="mc_maxfiles"  aria-label="Max files" title="Max files"  data-toggle-target="mi_maxfiles" onchange="handleEditCheckboxChange(this)">
    		 </div>
-		  <span class="input-group-text modal-samesize-input-filerequest" id="mMaxFiles">Max Files</span>
+		  <span class="input-group-text modal-samesize-input-filerequest" id="mMaxFiles">{{ tr "fr.modal.edit.maxFiles" }}</span>
 		  <input type="number" min="1" id="mi_maxfiles" onChange="checkMaxNumber(this)" disabled class="form-control" aria-label="Max Files" aria-describedby="mMaxFiles" data-allow-regular-paste>
 		</div>
 
@@ -197,7 +197,7 @@
       			<input type="checkbox" id="mc_maxsize"  aria-label="Max Size" title="Max Size" 
       			 data-toggle-target="mi_maxsize" onchange="handleEditCheckboxChange(this)">
    		 </div>
-		  <span class="input-group-text modal-samesize-input-filerequest" id="tMaxSize">Max Size</span>
+		  <span class="input-group-text modal-samesize-input-filerequest" id="tMaxSize">{{ tr "fr.modal.edit.maxSize" }}</span>
 		  <input type="number" min="1" id="mi_maxsize"  onChange="checkMaxNumber(this)" disabled class="form-control" aria-label="Max Size" aria-describedby="tMaxSize" data-allow-regular-paste>
 		  <span class="input-group-text">MB</span>
 		</div>
@@ -215,19 +215,19 @@
 	     	 <div class="input-group-text">
   			<input type="checkbox" style="visibility: hidden" aria-hidden="true">
 		</div>
-		  <span class="input-group-text modal-samesize-input-filerequest" id="mdNotes">Notes</span>
-		  <input type="text" id="mNotes" class="form-control" placeholder="Notes about the request" aria-label="Notes" aria-describedby="mdNotes">
+		  <span class="input-group-text modal-samesize-input-filerequest" id="mdNotes">{{ tr "fr.modal.edit.notes" }}</span>
+		  <input type="text" id="mNotes" class="form-control" placeholder="{{ tr "fr.modal.edit.notesPlaceholder" }}" aria-label="Notes" aria-describedby="mdNotes">
 		</div>
 	      </div>
 	      <input type="hidden" id="freqId" value="" />
 {{ if .EndToEndEncryption }}
 <div class="callout callout-info">
-  Uploaded files are not end-to-end encrypted and will be stored in plain text on the server
+  {{ tr "fr.modal.edit.e2eWarning" }}
 </div>
 {{ end }}
 	      <div class="modal-footer">
-		<button type="button" class="btn btn-outline-light"  aria-label="Cancel" data-bs-dismiss="modal">Close</button>
-		<button type="button" class="btn btn-primary" data-fileid="" id="b_fr_save" onclick="">Save</button>
+		<button type="button" class="btn btn-outline-light"  aria-label="{{ tr "common.cancel" }}" data-bs-dismiss="modal">{{ tr "common.close" }}</button>
+		<button type="button" class="btn btn-primary" data-fileid="" id="b_fr_save" onclick="">{{ tr "fr.modal.edit.save" }}</button>
 	      </div>
 	    </div>
 	  </div>
@@ -238,12 +238,12 @@
 
 {{ define "uRDownloadbutton" }}
 	{{ if eq .UploadedFiles 0 }}
-		<button id="download-{{ .Id }}" type="button" class="btn btn-outline-light btn-sm disabled" title="Download all"><i class="bi bi-download"></i></button>
+		<button id="download-{{ .Id }}" type="button" class="btn btn-outline-light btn-sm disabled" title="{{ tr "fr.tooltip.downloadAll" }}"><i class="bi bi-download"></i></button>
 	{{ else }}
 		{{ if eq .UploadedFiles 1 }}
-			<button id="download-{{ .Id }}" type="button" class="btn btn-outline-light btn-sm" onclick="downloadFileWithPresign('{{ (index .FileIdList 0) }}');" title="Download all"><i class="bi bi-download"></i></button>
+			<button id="download-{{ .Id }}" type="button" class="btn btn-outline-light btn-sm" onclick="downloadFileWithPresign('{{ (index .FileIdList 0) }}');" title="{{ tr "fr.tooltip.downloadAll" }}"><i class="bi bi-download"></i></button>
 		{{ else }}
-			<button id="download-{{ .Id }}" type="button" class="btn btn-outline-light btn-sm" onclick="downloadFilesZipWithPresign('{{ .GetFilesAsString }}', '{{ .Name }}');" title="Download all"><i class="bi bi-download"></i></button>
+			<button id="download-{{ .Id }}" type="button" class="btn btn-outline-light btn-sm" onclick="downloadFilesZipWithPresign('{{ .GetFilesAsString }}', '{{ .Name }}');" title="{{ tr "fr.tooltip.downloadAll" }}"><i class="bi bi-download"></i></button>
 	{{ end }}
 	{{ end }}
 {{ end }}
@@ -251,14 +251,14 @@
 
 {{ define "uRFileCell" }}
 	<td>
-	<span id="totalFiles-fr-{{.Id}}" title="Uploaded files">{{ .UploadedFiles }}</span>{{ if ne .ReservedUploads 0 }}<span title="Active uploads">+{{.ReservedUploads}}</span>{{end}}{{ if ne .MaxFiles 0 }} / <span title="File limit">{{ .MaxFiles }}</span>{{end}}
+	<span id="totalFiles-fr-{{.Id}}" title="{{ tr "fr.tooltip.uploadedFiles" }}">{{ .UploadedFiles }}</span>{{ if ne .ReservedUploads 0 }}<span title="{{ tr "fr.tooltip.activeUploads" }}">+{{.ReservedUploads}}</span>{{end}}{{ if ne .MaxFiles 0 }} / <span title="{{ tr "fr.tooltip.fileLimit" }}">{{ .MaxFiles }}</span>{{end}}
 	{{ if gt .UploadedFiles 0 }}
 	 <button
 		  class="btn btn-sm btn-link text-light p-0 collapse-toggle"
 		  data-bs-toggle="collapse"
 		  data-bs-target="#collapse-filelist-{{ .Id }}"
 		  aria-expanded="false"
-		  title = "Expand / Collapse"
+		  title = "{{ tr "fr.tooltip.expand" }}"
 		  aria-controls="collapse-filelist-{{ .Id }}">
 		  <i class="bi bi-chevron-down"></i>
 		</button>

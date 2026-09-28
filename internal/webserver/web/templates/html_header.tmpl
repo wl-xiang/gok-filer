@@ -1,5 +1,5 @@
 {{define "header"}}<!doctype html>
-<html lang="en" class="h-100">
+<html lang="{{ currentLanguage }}" class="h-100" data-bs-theme="dark">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,6 +14,9 @@
 	<link rel="manifest" href="./site.webmanifest">
         <link href="./css/min/gokapi.min.{{ template "css_main"}}.css" rel="stylesheet">
 	<link href="./assets/dist/icons/bootstrap-icons.min.css" rel="stylesheet">
+	<!-- Liquid glass design system. Loaded after the main stylesheet so it can override it. -->
+	<link href="./css/theme.css" rel="stylesheet">
+	<script src="./js/theme.js"></script>
 	<script src="./js/min/all_public.min.js"></script>
 {{ if .IsAdminView }}
         <title>{{.PublicName}} Admin</title>
@@ -40,12 +43,12 @@
 {{ else }}
    {{ if .IsDownloadView }}
        {{ if .IsPasswordView }}
-          <title>{{.PublicName}}: Password required</title>
+          <title>{{.PublicName}}: {{ tr "downloadpw.title" }}</title>
 	  <meta name="title" content="{{.PublicName}}">
-    	  <meta name="description" content="Password required">
+    	  <meta name="description" content="{{ tr "downloadpw.title" }}">
     	  
     	  <meta property="og:title" content="{{.PublicName}}"/>
-  	  <meta property="og:description" content="Password required"/>
+  	  <meta property="og:description" content="{{ tr "downloadpw.title" }}"/>
        {{ else }}
           <title>{{.PublicName}}: {{.Name}}</title>
 	  <meta name="title" content="{{.PublicName}}: {{.Name}}">
@@ -64,10 +67,24 @@
          <script src="./js/min/end2end_download.min.{{ template "js_e2eversion"}}.js"></script>
 {{end}}
   </head>
-  <body class="d-flex h-100 text-center text-white bg-dark">
+  <body class="d-flex h-100 text-center">
+<!-- Global toolbar: theme switcher and language switcher, available on every rendered page -->
+<div id="gk-toolbar" class="gk-toolbar" role="group" aria-label="{{ tr "common.language" }}">
+  <button type="button" id="gk-theme-toggle" class="gk-toolbar-btn" onclick="gokapiToggleTheme()"
+          title="{{ tr "common.toggleTheme" }}" aria-label="{{ tr "common.toggleTheme" }}">
+    <i class="bi bi-moon-stars-fill" id="gk-theme-icon" aria-hidden="true"></i>
+  </button>
+  <div class="gk-lang-switch">
+    {{ $current := currentLanguage }}
+    {{ range availableLanguages }}
+    <a class="gk-lang-link {{ if eq .Code $current }}active{{ end }}" href="./setLanguage?lang={{ .Code }}"
+       title="{{ .Name }}" lang="{{ .Code }}">{{ .Name }}</a>
+    {{ end }}
+  </div>
+</div>
 {{ if .IsAdminView }}
    {{ if .IsUserTabAvailable }}
-<div style="position:fixed;top:0.5rem;right:0.75rem;z-index:9999;">
+<div class="gk-user-badge">
   <span class="badge bg-secondary opacity-75">
     <i class="bi bi-person-fill"></i> {{.ActiveUser.Name}}
   </span>
@@ -78,20 +95,20 @@
         <div  style="max-width: 80em;  margin: 0 auto;"  class="inner">
           <h1>{{.PublicName}}</h1>
           <nav class="nav nav-masthead justify-content-center">
-            <a class="nav-link {{ if eq .ActiveView 0}}active{{ end }}" href="./admin">Upload</a>
+            <a class="nav-link {{ if eq .ActiveView 0}}active{{ end }}" href="./admin">{{ tr "nav.upload" }}</a>
             {{ if .ActiveUser.HasPermissionCreateFileRequests }}
-            <a class="nav-link {{ if eq .ActiveView 4 }}active{{ end }}" href="./filerequests">File Requests</a>
+            <a class="nav-link {{ if eq .ActiveView 4 }}active{{ end }}" href="./filerequests">{{ tr "nav.fileRequests" }}</a>
             {{ end }}
             {{ if and .ActiveUser.HasPermissionManageUsers .IsUserTabAvailable }}
-            <a class="nav-link {{ if eq .ActiveView 3 }}active{{ end }}" href="./users">Users</a>
+            <a class="nav-link {{ if eq .ActiveView 3 }}active{{ end }}" href="./users">{{ tr "nav.users" }}</a>
             {{ end }}
             {{ if .ShowApiMenu }}
-            <a class="nav-link {{ if eq .ActiveView 2 }}active{{ end }}" href="./apiKeys">API</a>
+            <a class="nav-link {{ if eq .ActiveView 2 }}active{{ end }}" href="./apiKeys">{{ tr "nav.api" }}</a>
             {{ end }}
             {{ if .ActiveUser.HasPermissionManageLogs }}
-            <a class="nav-link {{ if eq .ActiveView 1 }}active{{ end }}" href="./logs">Status</a>
+            <a class="nav-link {{ if eq .ActiveView 1 }}active{{ end }}" href="./logs">{{ tr "nav.status" }}</a>
             {{ end }}
-            {{ if .IsLogoutAvailable }}<a class="nav-link" href="#" onclick="doLogout()">Logout</a>{{ end }}
+            {{ if .IsLogoutAvailable }}<a class="nav-link" href="#" onclick="doLogout()">{{ tr "nav.logout" }}</a>{{ end }}
           </nav>
         </div>
       </header>
@@ -106,4 +123,3 @@
   <main>
 {{ end }}
 {{end}}
-

@@ -6,6 +6,7 @@ import (
 	"path"
 	"reflect"
 	"strconv"
+	"strings"
 
 	envParser "github.com/caarlos0/env/v6"
 	"github.com/forceu/gokapi/internal/environment/deprecation"
@@ -19,6 +20,14 @@ const DefaultPort = 53842
 // MinLengthId is the minimum character length for download and file request IDs
 // The value is hardcoded in Environment and needs to be kept in sync with this value.
 const MinLengthId = 5
+
+// FileIdModeLong generates file IDs with the length configured by GOKAPI_LENGTH_ID (default)
+const FileIdModeLong = "long"
+
+// FileIdModeShort generates shorter file IDs with the length configured by GOKAPI_LENGTH_SHORT_ID.
+// Short IDs keep the full cryptographic randomness but are additionally checked against the
+// database to guarantee uniqueness.
+const FileIdModeShort = "short"
 
 // Environment is a struct containing available env variables
 type Environment struct {
@@ -42,6 +51,16 @@ type Environment struct {
 	LengthId int `env:"LENGTH_ID" envDefault:"15" minValue:"5"`
 	// Sets the length of the hotlink IDs
 	LengthHotlinkId int `env:"LENGTH_HOTLINK_ID" envDefault:"40" minValue:"8"`
+	// Sets the mode for generating file IDs. Supported values are "long" (default) and "short".
+	// With "long" the length is defined by GOKAPI_LENGTH_ID, with "short" by GOKAPI_LENGTH_SHORT_ID
+	FileIdMode string `env:"FILE_ID_MODE" envDefault:"long"`
+	// Sets the length of the file IDs when GOKAPI_FILE_ID_MODE is set to "short".
+	// Value must be 5 or greater. Short IDs keep the full cryptographic randomness and are
+	// additionally checked against the database to guarantee uniqueness
+	LengthShortId int `env:"LENGTH_SHORT_ID" envDefault:"8" minValue:"5"`
+	// Creates the built-in accounts admin/admin1234 and user/user1234 on startup, if they do not exist yet.
+	// Existing users with the same name are never modified
+	CreateBuiltinUsers bool `env:"CREATE_BUILTIN_USERS" envDefault:"true"`
 	// Also outputs all log file entries to the console output, if set to true
 	LogToStdout bool `env:"LOG_STDOUT" envDefault:"false"`
 	// Sets the maximum allowed file size in MB
@@ -231,6 +250,13 @@ func parseFlags(result Environment) Environment {
 	if result.LengthHotlinkId < 8 {
 		result.LengthHotlinkId = 8
 	}
+	result.FileIdMode = strings.ToLower(strings.TrimSpace(result.FileIdMode))
+	if result.FileIdMode != FileIdModeShort {
+		result.FileIdMode = FileIdModeLong
+	}
+	if result.LengthShortId < MinLengthId {
+		result.LengthShortId = MinLengthId
+	}
 	if result.MaxMemory < 5 {
 		result.MaxMemory = 5
 	}
@@ -249,6 +275,20 @@ func (e *Environment) IsAwsProvided() bool {
 		e.AwsRegion != "" &&
 		e.AwsKeyId != "" &&
 		e.AwsKeySecret != ""
+}
+
+// UsesShortFileIds returns true if file IDs should be generated in the short mode
+func (e *Environment) UsesShortFileIds() bool {
+	return e.FileIdMode == FileIdModeShort
+}
+
+// GetFileIdLength returns the number of characters to use for newly generated file IDs.
+// It resolves to GOKAPI_LENGTH_SHORT_ID in short mode and to GOKAPI_LENGTH_ID otherwise.
+func (e *Environment) GetFileIdLength() int {
+	if e.UsesShortFileIds() {
+		return e.LengthShortId
+	}
+	return e.LengthId
 }
 
 // GetConfigPaths returns the config paths to config files and the directory containing the files. The following results are returned:

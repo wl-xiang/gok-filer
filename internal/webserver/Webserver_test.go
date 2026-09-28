@@ -15,6 +15,7 @@ import (
 
 	"github.com/forceu/gokapi/internal/configuration"
 	"github.com/forceu/gokapi/internal/configuration/database"
+	"github.com/forceu/gokapi/internal/i18n"
 	"github.com/forceu/gokapi/internal/models"
 	"github.com/forceu/gokapi/internal/storage/processingstatus"
 	"github.com/forceu/gokapi/internal/test"
@@ -40,6 +41,10 @@ func TestMain(m *testing.M) {
 func TestEmbedFs(t *testing.T) {
 	funcMap := template.FuncMap{
 		"newAdminButtonContext": newAdminButtonContext,
+		"tr":                    i18n.Translator(i18n.DefaultLanguage),
+		"trf":                   i18n.TranslatorFormat(i18n.DefaultLanguage),
+		"availableLanguages":    i18n.SupportedLanguages,
+		"currentLanguage":       func() string { return i18n.DefaultLanguage },
 	}
 	templates, err := template.New("").Funcs(funcMap).ParseFS(templateFolderEmbedded, "web/templates/*.tmpl")
 	if err != nil {

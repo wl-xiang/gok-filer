@@ -1,0 +1,613 @@
+/* ============================================================================
+ * Gokapi - Liquid Glass design system
+ * ----------------------------------------------------------------------------
+ * Loaded after the compiled main stylesheet, so all rules here refine or
+ * override the previous dark-only look.
+ *
+ * Design rules
+ *  - All radii come from the --gk-radius-* scale. Nested elements use
+ *    calc(outer - inset) so that inner and outer corners stay parallel.
+ *  - All margins / paddings come from the --gk-space-* 4px grid.
+ *  - Surfaces are translucent ("liquid glass") with a backdrop blur.
+ *  - Both the dark (default) and the light theme are supported. The theme is
+ *    switched by the data-bs-theme attribute on <html>, see ./js/theme.js
+ * ==========================================================================*/
+
+:root {
+	/* Radius scale (outer) */
+	--gk-radius-xs: 10px;
+	--gk-radius-sm: 14px;
+	--gk-radius-md: 18px;
+	--gk-radius-lg: 24px;
+	--gk-radius-xl: 32px;
+	--gk-radius-pill: 999px;
+
+	/* Spacing grid, all values are multiples of 4px */
+	--gk-space-1: 4px;
+	--gk-space-2: 8px;
+	--gk-space-3: 12px;
+	--gk-space-4: 16px;
+	--gk-space-5: 20px;
+	--gk-space-6: 24px;
+	--gk-space-8: 32px;
+
+	/* Inset between an outer surface and a nested inner surface. The inner
+	   radius is always outer - inset, which keeps the corners parallel. */
+	--gk-inset: 6px;
+	--gk-surface-padding: var(--gk-space-5);
+
+	--gk-blur: 22px;
+	--gk-blur-strong: 34px;
+	--gk-saturate: 170%;
+	--gk-border-width: 1px;
+
+	--gk-inner-radius-xs: calc(var(--gk-radius-xs) - var(--gk-inset));
+	--gk-inner-radius-sm: calc(var(--gk-radius-sm) - var(--gk-inset));
+	--gk-inner-radius-md: calc(var(--gk-radius-md) - var(--gk-inset));
+	--gk-inner-radius-lg: calc(var(--gk-radius-lg) - var(--gk-inset));
+	--gk-inner-radius-xl: calc(var(--gk-radius-xl) - var(--gk-inset));
+
+	--gk-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+		"Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", Roboto, Helvetica,
+		Arial, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+ * Dark theme (default)
+ * ------------------------------------------------------------------------ */
+html[data-bs-theme="dark"] {
+	--gk-text: #eef2f8;
+	--gk-text-muted: #a3adbb;
+	--gk-heading: #ffffff;
+
+	--gk-bg-base: #070a11;
+	--gk-bg-overlay-1: rgba(6, 10, 20, 0.72);
+	--gk-bg-overlay-2: rgba(10, 14, 26, 0.86);
+
+	--gk-glass-bg: rgba(26, 33, 48, 0.55);
+	--gk-glass-bg-strong: rgba(22, 28, 42, 0.78);
+	--gk-glass-bg-subtle: rgba(255, 255, 255, 0.05);
+	--gk-glass-border: rgba(255, 255, 255, 0.14);
+	--gk-glass-border-strong: rgba(255, 255, 255, 0.22);
+	--gk-glass-highlight: rgba(255, 255, 255, 0.10);
+	--gk-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+	--gk-shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.38);
+	--gk-accent: #5ea8ff;
+	color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+ * Light theme
+ * ------------------------------------------------------------------------ */
+html[data-bs-theme="light"] {
+	--gk-text: #17202e;
+	--gk-text-muted: #5a6675;
+	--gk-heading: #0d1421;
+
+	--gk-bg-base: #e8edf6;
+	--gk-bg-overlay-1: rgba(233, 238, 248, 0.66);
+	--gk-bg-overlay-2: rgba(222, 231, 245, 0.82);
+
+	--gk-glass-bg: rgba(255, 255, 255, 0.60);
+	--gk-glass-bg-strong: rgba(255, 255, 255, 0.82);
+	--gk-glass-bg-subtle: rgba(255, 255, 255, 0.48);
+	--gk-glass-border: rgba(255, 255, 255, 0.85);
+	--gk-glass-border-strong: rgba(255, 255, 255, 0.95);
+	--gk-glass-highlight: rgba(255, 255, 255, 0.95);
+	--gk-shadow: 0 20px 45px rgba(28, 42, 70, 0.18);
+	--gk-shadow-soft: 0 10px 26px rgba(28, 42, 70, 0.12);
+	--gk-accent: #0b62d6;
+	color-scheme: light;
+}
+
+/* ---------------------------------------------------------------------------
+ * Base / background
+ * ------------------------------------------------------------------------ */
+body {
+	font-family: var(--gk-font);
+	background-color: var(--gk-bg-base) !important;
+	background-image:
+		linear-gradient(var(--gk-bg-overlay-1), var(--gk-bg-overlay-2)),
+		url("../assets/background.jpg") !important;
+	background-repeat: no-repeat !important;
+	background-position: center center !important;
+	background-attachment: fixed !important;
+	background-size: cover, cover !important;
+	color: var(--gk-text);
+	transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6, .card-title {
+	color: var(--gk-heading);
+}
+
+a {
+	color: inherit;
+	text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+.text-muted {
+	color: var(--gk-text-muted) !important;
+}
+
+/* Keep muted utility readable in the light theme */
+html[data-bs-theme="light"] .text-white-50,
+html[data-bs-theme="light"] .text-light {
+	color: var(--gk-text-muted) !important;
+}
+
+html[data-bs-theme="light"] .text-white {
+	color: var(--gk-text) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Frosted surfaces
+ * ------------------------------------------------------------------------ */
+.card,
+.file-card,
+.stat-card,
+.info-box,
+.upload-box,
+.upload-option-card,
+.gokapi-dialog,
+.modal-content,
+.toastnotification,
+.dropdown-menu,
+.popover {
+	background-color: var(--gk-glass-bg) !important;
+	background-image: none !important;
+	-webkit-backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
+	backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
+	border: var(--gk-border-width) solid var(--gk-glass-border) !important;
+	border-radius: var(--gk-radius-lg);
+	box-shadow:
+		var(--gk-shadow),
+		inset 0 1px 0 var(--gk-glass-highlight);
+	color: var(--gk-text);
+}
+
+/* Support translucent surfaces where backdrop-filter is unavailable */
+@supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+	.card, .file-card, .stat-card, .info-box, .upload-box,
+	.upload-option-card, .gokapi-dialog, .modal-content {
+		background-color: var(--gk-glass-bg-strong) !important;
+	}
+}
+
+.card {
+	margin-bottom: var(--gk-space-4);
+}
+
+.card-body {
+	background-color: transparent !important;
+	color: var(--gk-text) !important;
+	/* No !important here, so that Bootstrap spacing utilities (p-3, p-5, ...) still win */
+	padding: var(--gk-surface-padding);
+	border-radius: calc(var(--gk-radius-lg) - var(--gk-border-width));
+}
+
+/* Nested surface: keeps the inner corner parallel to the outer one */
+.card .info-box,
+.card .upload-option-card,
+.card .upload-box {
+	border-radius: var(--gk-inner-radius-md) !important;
+}
+
+.upload-options-grid {
+	gap: var(--gk-space-2);
+	margin-bottom: var(--gk-space-3);
+}
+
+.upload-option-card {
+	padding: var(--gk-space-3) var(--gk-space-4);
+	border-radius: var(--gk-radius-md) !important;
+	box-shadow: var(--gk-shadow-soft), inset 0 1px 0 var(--gk-glass-highlight) !important;
+}
+
+.upload-option-card .form-control,
+.upload-option-card .input-group-text {
+	border-radius: var(--gk-inner-radius-xs) !important;
+}
+
+.info-box {
+	padding: var(--gk-space-4) !important;
+	margin-bottom: var(--gk-space-4) !important;
+	border-radius: var(--gk-radius-md) !important;
+}
+
+.stat-card {
+	border-radius: var(--gk-radius-lg) !important;
+	transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.stat-card:hover {
+	transform: translateY(-3px);
+	border-color: var(--gk-glass-border-strong) !important;
+	box-shadow: var(--gk-shadow) !important;
+}
+
+/* Upload drop zone */
+.upload-box {
+	border: 2px dashed var(--gk-glass-border-strong) !important;
+	border-radius: var(--gk-radius-xl) !important;
+	padding: var(--gk-space-8) !important;
+	transition: all 0.2s ease;
+}
+
+.upload-box.highlight,
+.upload-box.dz-drag-hover {
+	border-color: var(--gk-accent) !important;
+	background-color: color-mix(in srgb, var(--gk-accent) 12%, transparent) !important;
+}
+
+.file-card {
+	border-radius: var(--gk-radius-xl) !important;
+	padding: var(--gk-space-2);
+}
+
+.icon-container {
+	background-color: var(--gk-glass-bg-subtle) !important;
+	border-radius: var(--gk-radius-pill) !important;
+	color: var(--gk-accent) !important;
+}
+
+/* Modals / dialogs */
+.modal-content,
+.gokapi-dialog {
+	border-radius: var(--gk-radius-xl) !important;
+	background-color: var(--gk-glass-bg-strong) !important;
+	-webkit-backdrop-filter: blur(var(--gk-blur-strong)) saturate(var(--gk-saturate));
+	backdrop-filter: blur(var(--gk-blur-strong)) saturate(var(--gk-saturate));
+}
+
+.modal-header,
+.modal-footer {
+	border-color: var(--gk-glass-border) !important;
+	padding: var(--gk-space-4) var(--gk-space-5);
+}
+
+.modal-body {
+	padding: var(--gk-space-5);
+}
+
+/* Dropdowns, popovers, toasts */
+.dropdown-menu {
+	border-radius: var(--gk-radius-md) !important;
+	padding: var(--gk-space-2);
+}
+
+.dropdown-item {
+	border-radius: var(--gk-inner-radius-xs);
+	padding: var(--gk-space-2) var(--gk-space-3);
+	color: var(--gk-text);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+	background-color: var(--gk-glass-bg-subtle);
+	color: var(--gk-text);
+}
+
+.toastnotification {
+	border-radius: var(--gk-radius-md) !important;
+	bottom: var(--gk-space-5);
+	padding: var(--gk-space-3) var(--gk-space-4);
+}
+
+.popover {
+	border-radius: var(--gk-radius-md) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Forms and buttons
+ * ------------------------------------------------------------------------ */
+.form-control,
+.form-select,
+.input-group-text {
+	border-radius: var(--gk-radius-sm) !important;
+	border-color: var(--gk-glass-border) !important;
+	background-color: var(--gk-glass-bg-subtle) !important;
+	color: var(--gk-text) !important;
+	padding: var(--gk-space-3) var(--gk-space-3);
+}
+
+.input-group > .form-control,
+.input-group > .input-group-text,
+.input-group > .form-select {
+	border-radius: var(--gk-radius-sm) !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+	border-color: var(--gk-accent) !important;
+	box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--gk-accent) 25%, transparent) !important;
+	background-color: var(--gk-glass-bg) !important;
+}
+
+.form-control::placeholder {
+	color: var(--gk-text-muted) !important;
+	opacity: 0.85;
+}
+
+.form-control:disabled {
+	background-color: var(--gk-glass-bg-subtle) !important;
+	color: var(--gk-text-muted) !important;
+	opacity: 0.6;
+}
+
+.btn {
+	border-radius: var(--gk-radius-sm) !important;
+	padding: var(--gk-space-2) var(--gk-space-4);
+	transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.btn:hover:not(:disabled),
+.btn:focus:not(:disabled) {
+	transform: translateY(-1px);
+	filter: brightness(1.06);
+}
+
+.btn-sm {
+	border-radius: var(--gk-radius-xs) !important;
+	padding: var(--gk-space-1) var(--gk-space-2);
+}
+
+.btn-lg {
+	border-radius: var(--gk-radius-md) !important;
+}
+
+.btn-primary {
+	box-shadow: var(--gk-shadow-soft);
+}
+
+.btn-outline-light {
+	border-color: var(--gk-glass-border-strong) !important;
+	color: var(--gk-text) !important;
+	background-color: var(--gk-glass-bg-subtle);
+}
+
+.btn-upload-custom {
+	border-radius: var(--gk-radius-pill) !important;
+	padding: var(--gk-space-3) var(--gk-space-8);
+	box-shadow: var(--gk-shadow-soft);
+}
+
+/* ---------------------------------------------------------------------------
+ * Navigation
+ * ------------------------------------------------------------------------ */
+.masthead {
+	margin-bottom: var(--gk-space-8);
+}
+
+.nav-masthead .nav-link {
+	padding: var(--gk-space-2) var(--gk-space-4) !important;
+	margin: 0 var(--gk-space-1);
+	border-radius: var(--gk-radius-pill) !important;
+	border-bottom: none !important;
+	color: var(--gk-text-muted) !important;
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nav-masthead .nav-link:hover,
+.nav-masthead .nav-link:focus {
+	background-color: var(--gk-glass-bg-subtle);
+	color: var(--gk-text) !important;
+}
+
+.nav-masthead .nav-link + .nav-link {
+	margin-left: var(--gk-space-1) !important;
+}
+
+.nav-masthead .active {
+	color: var(--gk-text) !important;
+	background-color: var(--gk-glass-bg) !important;
+	-webkit-backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
+	backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
+	box-shadow: inset 0 0 0 var(--gk-border-width) var(--gk-glass-border-strong);
+}
+
+/* ---------------------------------------------------------------------------
+ * Global toolbar (theme + language switcher)
+ * ------------------------------------------------------------------------ */
+.gk-toolbar {
+	position: fixed;
+	top: var(--gk-space-3);
+	right: var(--gk-space-4);
+	z-index: 1060;
+	display: flex;
+	align-items: center;
+	gap: var(--gk-space-2);
+	padding: var(--gk-space-1);
+	border-radius: var(--gk-radius-pill);
+	background-color: var(--gk-glass-bg) !important;
+	border: var(--gk-border-width) solid var(--gk-glass-border);
+	-webkit-backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
+	backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
+	box-shadow: var(--gk-shadow-soft);
+}
+
+.gk-toolbar-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border: none;
+	border-radius: var(--gk-radius-pill);
+	background-color: transparent;
+	color: var(--gk-text);
+	cursor: pointer;
+	font-size: 0.95rem;
+	transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.gk-toolbar-btn:hover {
+	background-color: var(--gk-glass-bg-subtle);
+	transform: rotate(-8deg);
+}
+
+.gk-lang-switch {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px;
+	border-radius: var(--gk-radius-pill);
+	background-color: var(--gk-glass-bg-subtle);
+}
+
+.gk-lang-link {
+	display: inline-block;
+	padding: 4px var(--gk-space-3);
+	border-radius: var(--gk-radius-pill);
+	font-size: 0.8rem;
+	font-weight: 600;
+	line-height: 1.4;
+	color: var(--gk-text-muted);
+	text-decoration: none;
+	white-space: nowrap;
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.gk-lang-link:hover {
+	color: var(--gk-text);
+	background-color: var(--gk-glass-bg-subtle);
+}
+
+.gk-lang-link.active {
+	color: var(--gk-text);
+	background-color: var(--gk-glass-bg-strong);
+	box-shadow: inset 0 0 0 var(--gk-border-width) var(--gk-glass-border-strong);
+}
+
+/* User badge is shifted down so it does not overlap the toolbar */
+.gk-user-badge {
+	position: fixed;
+	top: calc(var(--gk-space-3) + 44px);
+	right: var(--gk-space-4);
+	z-index: 1050;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tables
+ * ------------------------------------------------------------------------ */
+.table-responsive {
+	border-radius: var(--gk-radius-md);
+	/* Keep Bootstrap's horizontal scrolling: do not force overflow here, otherwise
+	   dropdown menus would be clipped on narrow screens */
+}
+
+table.table,
+.table-dark {
+	--bs-table-bg: transparent;
+	color: var(--gk-text) !important;
+	border-color: var(--gk-glass-border) !important;
+	margin-bottom: 0;
+}
+
+.table > :not(caption) > * > * {
+	background-color: transparent !important;
+	color: var(--gk-text) !important;
+	border-color: var(--gk-glass-border) !important;
+	padding: var(--gk-space-3) var(--gk-space-3);
+}
+
+.table thead th {
+	color: var(--gk-text-muted) !important;
+	font-size: 0.78rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	border-bottom-color: var(--gk-glass-border-strong) !important;
+}
+
+.filelist-item {
+	background-color: var(--gk-glass-bg-subtle) !important;
+}
+
+.filelist-item:hover,
+.filerequest-item:hover > td {
+	background-color: var(--gk-glass-bg) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Lists / misc widgets
+ * ------------------------------------------------------------------------ */
+.list-group-item {
+	background-color: var(--gk-glass-bg-subtle) !important;
+	border-color: var(--gk-glass-border) !important;
+	color: var(--gk-text) !important;
+	border-radius: var(--gk-radius-sm) !important;
+	margin-bottom: var(--gk-space-1);
+}
+
+.dark-list-item {
+	background-color: var(--gk-glass-bg-subtle) !important;
+	border-color: var(--gk-glass-border) !important;
+	color: var(--gk-text) !important;
+}
+
+.progress,
+.progress-stat {
+	background-color: var(--gk-glass-bg-subtle) !important;
+	border-radius: var(--gk-radius-pill) !important;
+	overflow: hidden;
+}
+
+.progress-bar {
+	border-radius: var(--gk-radius-pill) !important;
+}
+
+.log-dark-input,
+#logviewer {
+	background-color: rgba(0, 0, 0, 0.35) !important;
+	border-color: var(--gk-glass-border) !important;
+	color: #9fe0ff !important;
+	border-radius: var(--gk-inner-radius-sm) !important;
+}
+
+html[data-bs-theme="light"] .log-dark-input,
+html[data-bs-theme="light"] #logviewer {
+	background-color: rgba(255, 255, 255, 0.75) !important;
+	color: #0b3a5c !important;
+}
+
+.input-group-text-dark {
+	background-color: var(--gk-glass-bg-subtle) !important;
+	border-color: var(--gk-glass-border) !important;
+	color: var(--gk-text-muted) !important;
+}
+
+.highlighted-password {
+	background-color: var(--gk-glass-bg-subtle) !important;
+	color: var(--gk-text) !important;
+	border-color: var(--gk-glass-border) !important;
+	border-radius: var(--gk-radius-xs) !important;
+}
+
+.badge {
+	border-radius: var(--gk-radius-pill) !important;
+	padding: var(--gk-space-1) var(--gk-space-3);
+}
+
+.callout {
+	border-radius: var(--gk-radius-md);
+	padding: var(--gk-space-5);
+}
+
+/* ---------------------------------------------------------------------------
+ * Small screens
+ * ------------------------------------------------------------------------ */
+@media (max-width: 767px) {
+	:root {
+		--gk-surface-padding: var(--gk-space-4);
+	}
+
+	.gk-toolbar {
+		top: var(--gk-space-2);
+		right: var(--gk-space-2);
+	}
+
+	.gk-lang-link {
+		padding: 4px var(--gk-space-2);
+		font-size: 0.72rem;
+	}
+}

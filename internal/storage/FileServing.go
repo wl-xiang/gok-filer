@@ -329,9 +329,43 @@ func createNewMetaData(hash string, fileHeader chunking.FileHeader, userId int, 
 	return file
 }
 
-// createNewId returns a random ID
+// maxShortIdAttempts is the number of attempts to generate a unique short file ID
+// before falling back to a long ID, to avoid an endless loop
+const maxShortIdAttempts = 8
+
+// createNewId returns a random ID for a new file. Depending on the configuration
+// (GOKAPI_FILE_ID_MODE) either a long ID (default, GOKAPI_LENGTH_ID characters) or a
+// short ID (GOKAPI_LENGTH_SHORT_ID characters) is created.
 func createNewId() string {
+	env := configuration.GetEnvironment()
+	if env.UsesShortFileIds() {
+		return createUniqueFileId(env.LengthShortId)
+	}
+	return helper.GenerateRandomString(env.LengthId)
+}
+
+// createUniqueFileId generates a cryptographically secure random ID with the given length
+// and returns the first candidate that is not used by any stored file yet.
+// This guarantees uniqueness while keeping the full random strength of GenerateRandomString.
+// If no free ID can be found within maxShortIdAttempts, a long ID is generated as a safe fallback.
+func createUniqueFileId(length int) string {
+	if length < environment.MinLengthId {
+		length = environment.MinLengthId
+	}
+	for i := 0; i < maxShortIdAttempts; i++ {
+		candidate := helper.GenerateRandomString(length)
+		if !isFileIdInUse(candidate) {
+			return candidate
+		}
+	}
+	fmt.Println("Warning: Unable to find a unique short file ID, falling back to a long ID")
 	return helper.GenerateRandomString(configuration.GetEnvironment().LengthId)
+}
+
+// isFileIdInUse returns true if a file with the given ID is already stored in the database
+func isFileIdInUse(id string) bool {
+	_, exists := database.GetMetaDataById(id)
+	return exists
 }
 
 func getEncInfoFromExistingFile(hash string) (models.EncryptionInfo, bool) {

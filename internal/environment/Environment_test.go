@@ -86,3 +86,47 @@ func TestGetConfigPaths(t *testing.T) {
 	test.IsEqualString(t, configFile, "test2")
 	test.IsEqualString(t, awsConfig, "test/cloudconfig.yml")
 }
+
+func TestFileIdMode(t *testing.T) {
+	os.Unsetenv("GOKAPI_FILE_ID_MODE")
+	os.Unsetenv("GOKAPI_LENGTH_SHORT_ID")
+	// Backwards compatible default: long IDs
+	env := New()
+	test.IsEqualString(t, env.FileIdMode, FileIdModeLong)
+	test.IsEqualBool(t, env.UsesShortFileIds(), false)
+	test.IsEqualInt(t, env.LengthShortId, 8)
+	test.IsEqualInt(t, env.GetFileIdLength(), env.LengthId)
+
+	os.Setenv("GOKAPI_FILE_ID_MODE", "short")
+	env = New()
+	test.IsEqualBool(t, env.UsesShortFileIds(), true)
+	test.IsEqualInt(t, env.GetFileIdLength(), 8)
+
+	os.Setenv("GOKAPI_LENGTH_SHORT_ID", "12")
+	env = New()
+	test.IsEqualInt(t, env.GetFileIdLength(), 12)
+
+	// Values below the minimum are clamped to MinLengthId
+	os.Setenv("GOKAPI_LENGTH_SHORT_ID", "2")
+	env = New()
+	test.IsEqualInt(t, env.LengthShortId, MinLengthId)
+
+	// Unknown modes fall back to the long mode
+	os.Setenv("GOKAPI_FILE_ID_MODE", "invalid")
+	env = New()
+	test.IsEqualString(t, env.FileIdMode, FileIdModeLong)
+	test.IsEqualBool(t, env.UsesShortFileIds(), false)
+
+	os.Unsetenv("GOKAPI_FILE_ID_MODE")
+	os.Unsetenv("GOKAPI_LENGTH_SHORT_ID")
+}
+
+func TestCreateBuiltinUsersFlag(t *testing.T) {
+	os.Unsetenv("GOKAPI_CREATE_BUILTIN_USERS")
+	env := New()
+	test.IsEqualBool(t, env.CreateBuiltinUsers, true)
+	os.Setenv("GOKAPI_CREATE_BUILTIN_USERS", "false")
+	env = New()
+	test.IsEqualBool(t, env.CreateBuiltinUsers, false)
+	os.Unsetenv("GOKAPI_CREATE_BUILTIN_USERS")
+}
