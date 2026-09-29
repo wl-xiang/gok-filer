@@ -1,5 +1,5 @@
 /* ============================================================================
- * Gokapi - Liquid Glass design system
+ * Gokapi - Liquid Glass design system (v2, unified polish pass)
  * ----------------------------------------------------------------------------
  * Loaded after the compiled main stylesheet, so all rules here refine or
  * override the previous dark-only look.
@@ -8,9 +8,13 @@
  *  - All radii come from the --gk-radius-* scale. Nested elements use
  *    calc(outer - inset) so that inner and outer corners stay parallel.
  *  - All margins / paddings come from the --gk-space-* 4px grid.
+ *  - Button groups get real gaps instead of Bootstrap's collapsed borders so
+ *    the forced per-button radii never produce "glued together" buttons.
  *  - Surfaces are translucent ("liquid glass") with a backdrop blur.
  *  - Both the dark (default) and the light theme are supported. The theme is
  *    switched by the data-bs-theme attribute on <html>, see ./js/theme.js
+ *  - Never add overflow:hidden to .card / .table-responsive / .modal-content
+ *    (would clip dropdown menus / kill horizontal table scrolling).
  * ==========================================================================*/
 
 :root {
@@ -47,6 +51,11 @@
 	--gk-inner-radius-lg: calc(var(--gk-radius-lg) - var(--gk-inset));
 	--gk-inner-radius-xl: calc(var(--gk-radius-xl) - var(--gk-inset));
 
+	/* Component rhythm */
+	--gk-btn-gap: var(--gk-space-1);       /* gap between buttons in a group */
+	--gk-tool-gap: var(--gk-space-2);      /* gap between button groups      */
+	--gk-control-height: 42px;
+
 	--gk-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
 		"Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", Roboto, Helvetica,
 		Arial, sans-serif;
@@ -72,7 +81,14 @@ html[data-bs-theme="dark"] {
 	--gk-glass-highlight: rgba(255, 255, 255, 0.10);
 	--gk-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
 	--gk-shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.38);
+	--gk-shadow-bar: 0 6px 20px rgba(0, 0, 0, 0.35);
+	--gk-sticky-cell-bg: #161c2a;
+	--gk-sticky-cell-bg-hover: #1c2434;
 	--gk-accent: #5ea8ff;
+	--gk-accent-contrast: #0a1522;
+	--gk-accent-hover: #7cb8ff;
+	--gk-danger: #ff7b81;
+	--gk-vignette: rgba(0, 0, 0, 0.45);
 	color-scheme: dark;
 }
 
@@ -84,19 +100,28 @@ html[data-bs-theme="light"] {
 	--gk-text-muted: #5a6675;
 	--gk-heading: #0d1421;
 
-	--gk-bg-base: #e8edf6;
-	--gk-bg-overlay-1: rgba(233, 238, 248, 0.66);
-	--gk-bg-overlay-2: rgba(222, 231, 245, 0.82);
+	/* Bright, airy palette: near-white page base with a very light wash over
+	   the background image, so the light theme reads as "daylight" */
+	--gk-bg-base: #f5f8fd;
+	--gk-bg-overlay-1: rgba(245, 248, 253, 0.82);
+	--gk-bg-overlay-2: rgba(233, 241, 250, 0.90);
 
-	--gk-glass-bg: rgba(255, 255, 255, 0.60);
-	--gk-glass-bg-strong: rgba(255, 255, 255, 0.82);
-	--gk-glass-bg-subtle: rgba(255, 255, 255, 0.48);
-	--gk-glass-border: rgba(255, 255, 255, 0.85);
-	--gk-glass-border-strong: rgba(255, 255, 255, 0.95);
+	--gk-glass-bg: rgba(255, 255, 255, 0.72);
+	--gk-glass-bg-strong: rgba(255, 255, 255, 0.92);
+	--gk-glass-bg-subtle: rgba(255, 255, 255, 0.60);
+	--gk-glass-border: rgba(13, 32, 60, 0.12);
+	--gk-glass-border-strong: rgba(13, 32, 60, 0.22);
 	--gk-glass-highlight: rgba(255, 255, 255, 0.95);
-	--gk-shadow: 0 20px 45px rgba(28, 42, 70, 0.18);
-	--gk-shadow-soft: 0 10px 26px rgba(28, 42, 70, 0.12);
+	--gk-shadow: 0 20px 45px rgba(28, 42, 70, 0.14);
+	--gk-shadow-soft: 0 10px 26px rgba(28, 42, 70, 0.10);
+	--gk-shadow-bar: 0 6px 20px rgba(28, 42, 70, 0.08);
+	--gk-sticky-cell-bg: #fafbfe;
+	--gk-sticky-cell-bg-hover: #eff3fa;
 	--gk-accent: #0b62d6;
+	--gk-accent-contrast: #ffffff;
+	--gk-accent-hover: #0a56bd;
+	--gk-danger: #d63345;
+	--gk-vignette: rgba(28, 42, 70, 0.05);
 	color-scheme: light;
 }
 
@@ -115,6 +140,12 @@ body {
 	background-size: cover, cover !important;
 	color: var(--gk-text);
 	transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Soft vignette, theme aware (the legacy stylesheet hardcodes a heavy black
+   one which turns the light theme muddy) */
+body::after {
+	box-shadow: inset 0 0 5rem var(--gk-vignette) !important;
 }
 
 h1, h2, h3, h4, h5, h6, .card-title {
@@ -138,6 +169,12 @@ html[data-bs-theme="light"] .text-light {
 
 html[data-bs-theme="light"] .text-white {
 	color: var(--gk-text) !important;
+}
+
+/* Legacy hardcoded white heading on the download card would be invisible on
+   the light glass surface */
+html[data-bs-theme="light"] .filename-text {
+	color: var(--gk-heading) !important;
 }
 
 /* ---------------------------------------------------------------------------
@@ -176,6 +213,9 @@ html[data-bs-theme="light"] .text-white {
 
 .card {
 	margin-bottom: var(--gk-space-4);
+	/* Inline widths (width: 80% / 20em / ...) must never overflow on phones.
+	   max-width complements them without fighting the inline style. */
+	max-width: 100%;
 }
 
 .card-body {
@@ -186,16 +226,42 @@ html[data-bs-theme="light"] .text-white {
 	border-radius: calc(var(--gk-radius-lg) - var(--gk-border-width));
 }
 
+/* Legacy templates space sections with bare <br> elements directly inside
+   .card-body, which produces uneven vertical rhythm. Hide the structural ones
+   (direct children only) and compensate with consistent margins. Spacing
+   <br> tags *inside* paragraphs remain untouched. */
+.card-body > br {
+	display: none;
+}
+
+.card-title {
+	margin-bottom: var(--gk-space-4);
+}
+
+.card-text {
+	margin-bottom: var(--gk-space-4);
+}
+
+.card-body > .card-text:last-child {
+	margin-bottom: 0;
+}
+
 /* Nested surface: keeps the inner corner parallel to the outer one */
-.card .info-box,
-.card .upload-option-card,
-.card .upload-box {
+.card .info-box {
 	border-radius: var(--gk-inner-radius-md) !important;
+}
+
+/* The drop zone and the three option cards share the same curvature so the
+   upload card reads as one consistent group of surfaces */
+.card .upload-box,
+.card .upload-option-card {
+	border-radius: var(--gk-radius-lg) !important;
 }
 
 .upload-options-grid {
 	gap: var(--gk-space-2);
-	margin-bottom: var(--gk-space-3);
+	/* Same rhythm as every other section inside a card body */
+	margin-bottom: var(--gk-space-4);
 }
 
 .upload-option-card {
@@ -206,7 +272,8 @@ html[data-bs-theme="light"] .text-white {
 
 .upload-option-card .form-control,
 .upload-option-card .input-group-text {
-	border-radius: var(--gk-inner-radius-xs) !important;
+	/* The old 4px inner radius looked inconsistent with the card's 14-18px scale */
+	border-radius: var(--gk-radius-sm) !important;
 }
 
 .info-box {
@@ -222,8 +289,12 @@ html[data-bs-theme="light"] .text-white {
 
 .stat-card:hover {
 	transform: translateY(-3px);
-	border-color: var(--gk-glass-border-strong) !important;
+	border-color: var(--gk-accent) !important;
 	box-shadow: var(--gk-shadow) !important;
+}
+
+.stat-icon {
+	color: var(--gk-accent);
 }
 
 /* Upload drop zone */
@@ -238,6 +309,10 @@ html[data-bs-theme="light"] .text-white {
 .upload-box.dz-drag-hover {
 	border-color: var(--gk-accent) !important;
 	background-color: color-mix(in srgb, var(--gk-accent) 12%, transparent) !important;
+}
+
+.uploads-container {
+	margin-top: var(--gk-space-4);
 }
 
 .file-card {
@@ -288,6 +363,11 @@ html[data-bs-theme="light"] .text-white {
 	color: var(--gk-text);
 }
 
+.dropdown-item.disabled,
+.dropdown-item:disabled {
+	color: var(--gk-text-muted) !important;
+}
+
 .toastnotification {
 	border-radius: var(--gk-radius-md) !important;
 	bottom: var(--gk-space-5);
@@ -299,7 +379,177 @@ html[data-bs-theme="light"] .text-white {
 }
 
 /* ---------------------------------------------------------------------------
- * Forms and buttons
+ * Buttons
+ * ------------------------------------------------------------------------ */
+.btn {
+	border-radius: var(--gk-radius-sm) !important;
+	padding: var(--gk-space-2) var(--gk-space-4);
+	transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease,
+		background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn:hover:not(:disabled):not(.disabled),
+.btn:focus-visible:not(:disabled) {
+	transform: translateY(-1px);
+	filter: brightness(1.06);
+}
+
+.btn:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--gk-accent) 30%, transparent) !important;
+}
+
+.btn-sm {
+	border-radius: var(--gk-radius-xs) !important;
+	padding: var(--gk-space-1) var(--gk-space-2);
+}
+
+.btn-lg {
+	border-radius: var(--gk-radius-md) !important;
+	padding: var(--gk-space-3) var(--gk-space-6);
+}
+
+/* --- Button groups: real gaps instead of collapsed borders -----------------
+ * Bootstrap joins group buttons with -1px margins and flattened corners.
+ * The design system forces a radius on every .btn, which used to leave the
+ * flattened corners invisible and the buttons visually fused together
+ * (double borders, zero breathing room). Give every button its own radius
+ * and separate the members with a small gap instead. */
+.btn-group {
+	gap: var(--gk-btn-gap);
+}
+
+.btn-group > .btn,
+.btn-group > .btn-group > .btn {
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+}
+
+/* Undo Bootstrap's corner flattening inside groups: with gaps between the
+   buttons every member keeps the full xs radius */
+.btn-group > .btn:not(:first-child),
+.btn-group > .btn:not(:last-child),
+.btn-group-vertical > .btn {
+	border-radius: var(--gk-radius-xs) !important;
+}
+
+/* Split dropdown toggles ("URL | v") keep a slimmer shape */
+.btn-group > .dropdown-toggle-split {
+	padding-left: calc(var(--gk-space-2) + 2px);
+	padding-right: calc(var(--gk-space-2) + 2px);
+	border-radius: var(--gk-radius-xs) !important;
+}
+
+/* Toolbars: separate the groups */
+.btn-toolbar {
+	gap: var(--gk-tool-gap);
+}
+
+.btn-toolbar > .btn-group:not(:first-child) {
+	margin-left: 0 !important;
+}
+
+/* Action buttons in tables align with the centred column headers instead of
+   hugging the right edge of the cell */
+.table .btn-toolbar.justify-content-end {
+	justify-content: center !important;
+}
+
+/* Standalone adjacent buttons (outside groups/modals/grids) get breathing
+   room, e.g. password row + copy button in the users modal */
+.highlighted-password + .btn {
+	margin-left: var(--gk-space-2);
+	vertical-align: middle;
+}
+
+/* --- Button colour system --------------------------------------------------
+ * Primary buttons follow the theme accent instead of Bootstrap's hardcoded
+ * blue, so both themes share one coherent colour story. */
+.btn-primary {
+	--bs-btn-bg: var(--gk-accent);
+	--bs-btn-border-color: transparent;
+	--bs-btn-color: var(--gk-accent-contrast);
+	--bs-btn-hover-bg: var(--gk-accent-hover);
+	--bs-btn-hover-border-color: transparent;
+	--bs-btn-hover-color: var(--gk-accent-contrast);
+	--bs-btn-active-bg: var(--gk-accent-hover);
+	--bs-btn-active-border-color: transparent;
+	--bs-btn-active-color: var(--gk-accent-contrast);
+	--bs-btn-disabled-bg: var(--gk-accent);
+	--bs-btn-disabled-border-color: transparent;
+	--bs-btn-disabled-color: var(--gk-accent-contrast);
+	--bs-btn-focus-shadow-rgb: 94, 168, 255;
+	box-shadow: var(--gk-shadow-soft);
+}
+
+.btn-primary:focus-visible {
+	box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--gk-accent) 30%, transparent) !important;
+}
+
+.btn-outline-light {
+	border-color: var(--gk-glass-border-strong) !important;
+	color: var(--gk-text) !important;
+	background-color: var(--gk-glass-bg-subtle);
+}
+
+.btn-outline-light:hover:not(:disabled),
+.btn-outline-light:focus:not(:disabled) {
+	background-color: var(--gk-glass-bg) !important;
+	color: var(--gk-text) !important;
+	border-color: var(--gk-accent) !important;
+}
+
+.btn-outline-danger {
+	--bs-btn-color: var(--gk-danger);
+	--bs-btn-border-color: color-mix(in srgb, var(--gk-danger) 55%, transparent);
+	--bs-btn-hover-bg: color-mix(in srgb, var(--gk-danger) 18%, transparent);
+	--bs-btn-hover-border-color: var(--gk-danger);
+	--bs-btn-hover-color: var(--gk-danger);
+	--bs-btn-active-bg: color-mix(in srgb, var(--gk-danger) 28%, transparent);
+	--bs-btn-active-color: var(--gk-danger);
+}
+
+.btn-danger {
+	--bs-btn-bg: var(--gk-danger);
+	--bs-btn-border-color: transparent;
+	--bs-btn-hover-bg: color-mix(in srgb, var(--gk-danger) 86%, #000);
+	--bs-btn-hover-border-color: transparent;
+	--bs-btn-active-bg: color-mix(in srgb, var(--gk-danger) 80%, #000);
+	--bs-btn-active-border-color: transparent;
+}
+
+/* Disabled primary / upload buttons: previously hardcoded to a dark charcoal
+   (#212529), which read as "broken" on the light theme */
+.btn-primary:disabled,
+.btn-upload-custom:disabled {
+	background-color: var(--gk-glass-bg-subtle) !important;
+	color: var(--gk-text-muted) !important;
+	border: 1px solid var(--gk-glass-border) !important;
+	box-shadow: none;
+	cursor: not-allowed;
+	opacity: 1;
+	transform: none;
+	filter: none;
+}
+
+.btn-upload-custom {
+	border-radius: var(--gk-radius-pill) !important;
+	padding: var(--gk-space-3) var(--gk-space-8);
+	box-shadow: var(--gk-shadow-soft);
+}
+
+.btn-link {
+	color: var(--gk-accent) !important;
+	text-decoration: none;
+}
+
+.btn-link:hover {
+	color: var(--gk-accent-hover) !important;
+	text-decoration: underline;
+}
+
+/* ---------------------------------------------------------------------------
+ * Forms
  * ------------------------------------------------------------------------ */
 .form-control,
 .form-select,
@@ -311,10 +561,50 @@ html[data-bs-theme="light"] .text-white {
 	padding: var(--gk-space-3) var(--gk-space-3);
 }
 
-.input-group > .form-control,
-.input-group > .input-group-text,
-.input-group > .form-select {
-	border-radius: var(--gk-radius-sm) !important;
+/* Input groups are one composite control: flat inner edges, outer corners
+   rounded, so the segments do not look like three glued boxes */
+.input-group {
+	gap: 0;
+}
+
+/* First segment: rounded left */
+.input-group > .input-group-text:first-child,
+.input-group > .form-control:first-child,
+.input-group > .form-select:first-child {
+	border-radius: var(--gk-radius-sm) 0 0 var(--gk-radius-sm) !important;
+	margin-left: 0;
+}
+
+/* Segments after the first overlap the preceding border by 1px */
+.input-group > .form-control:not(:first-child),
+.input-group > .form-select:not(:first-child) {
+	margin-left: -1px;
+}
+
+/* Last segment: rounded right */
+.input-group > :last-child {
+	border-radius: 0 var(--gk-radius-sm) var(--gk-radius-sm) 0 !important;
+}
+
+/* Middle segments (3+ piece groups): square on both sides. Must NOT match
+   first segments, otherwise the left edge of two-piece groups goes square. */
+.input-group > :not(:first-child):not(:last-child) {
+	border-radius: 0 !important;
+}
+
+.input-group > .input-group-text {
+	color: var(--gk-text-muted) !important;
+}
+
+/* Match form control heights with the button scale */
+.form-control,
+.form-select {
+	min-height: var(--gk-control-height);
+}
+
+.upload-option-card .form-control {
+	min-height: calc(var(--gk-control-height) - 8px);
+	padding: var(--gk-space-1) var(--gk-space-2);
 }
 
 .form-control:focus,
@@ -329,101 +619,127 @@ html[data-bs-theme="light"] .text-white {
 	opacity: 0.85;
 }
 
-.form-control:disabled {
+.form-control:disabled,
+.form-select:disabled {
 	background-color: var(--gk-glass-bg-subtle) !important;
 	color: var(--gk-text-muted) !important;
 	opacity: 0.6;
 }
 
-.btn {
-	border-radius: var(--gk-radius-sm) !important;
-	padding: var(--gk-space-2) var(--gk-space-4);
-	transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+.form-check-input {
+	border-color: var(--gk-glass-border-strong);
 }
 
-.btn:hover:not(:disabled),
-.btn:focus:not(:disabled) {
-	transform: translateY(-1px);
-	filter: brightness(1.06);
+.form-check-input:checked {
+	background-color: var(--gk-accent);
+	border-color: var(--gk-accent);
 }
 
-.btn-sm {
-	border-radius: var(--gk-radius-xs) !important;
-	padding: var(--gk-space-1) var(--gk-space-2);
-}
-
-.btn-lg {
-	border-radius: var(--gk-radius-md) !important;
-}
-
-.btn-primary {
-	box-shadow: var(--gk-shadow-soft);
-}
-
-.btn-outline-light {
-	border-color: var(--gk-glass-border-strong) !important;
-	color: var(--gk-text) !important;
-	background-color: var(--gk-glass-bg-subtle);
-}
-
-.btn-upload-custom {
-	border-radius: var(--gk-radius-pill) !important;
-	padding: var(--gk-space-3) var(--gk-space-8);
-	box-shadow: var(--gk-shadow-soft);
+.form-check-input:focus {
+	border-color: var(--gk-accent);
+	box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--gk-accent) 25%, transparent);
 }
 
 /* ---------------------------------------------------------------------------
- * Navigation
+ * Unified top navigation bar
+ * Brand (left) / page navigation (center) / theme + language + user (right).
+ * Replaces the previous floating toolbar + separate user badge, which could
+ * overlap the admin nav on narrow screens.
  * ------------------------------------------------------------------------ */
-.masthead {
-	margin-bottom: var(--gk-space-8);
+.gk-topbar {
+	position: sticky;
+	top: 0;
+	z-index: 1060;
+	/* Full-bleed: cancels the p-3 of the page container */
+	margin: -1rem -1rem 0;
+	padding: var(--gk-space-2) var(--gk-space-4);
+	background-color: var(--gk-glass-bg-strong) !important;
+	border-bottom: var(--gk-border-width) solid var(--gk-glass-border);
+	-webkit-backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
+	backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
+	box-shadow: var(--gk-shadow-bar);
 }
 
-.nav-masthead .nav-link {
+.gk-topbar-inner {
+	max-width: 84em;
+	margin: 0 auto;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--gk-space-2) var(--gk-space-4);
+}
+
+.gk-brand {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--gk-space-2);
+	flex-shrink: 0;
+	font-size: 1.25rem;
+	font-weight: 800;
+	letter-spacing: 0.01em;
+	line-height: 1.2;
+	color: var(--gk-heading) !important;
+	text-decoration: none;
+	white-space: nowrap;
+	text-transform: none;
+}
+
+.gk-brand i {
+	color: var(--gk-accent);
+	font-size: 1.3rem;
+}
+
+.gk-brand:hover {
+	color: var(--gk-heading) !important;
+	filter: brightness(1.08);
+}
+
+.gk-topbar .nav-masthead {
+	display: flex;
+	flex: 0 1 auto;
+	min-width: 0;
+	/* Nav links sit next to the brand, not centred */
+	justify-content: flex-start;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	scrollbar-width: none;
+	row-gap: 0;
+}
+
+.gk-topbar .nav-masthead::-webkit-scrollbar {
+	display: none;
+}
+
+.gk-topbar .nav-masthead .nav-link {
 	padding: var(--gk-space-2) var(--gk-space-4) !important;
-	margin: 0 var(--gk-space-1);
+	margin: 0 !important;
 	border-radius: var(--gk-radius-pill) !important;
 	border-bottom: none !important;
 	color: var(--gk-text-muted) !important;
+	white-space: nowrap;
 	transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.nav-masthead .nav-link:hover,
-.nav-masthead .nav-link:focus {
+.gk-topbar .nav-masthead .nav-link:hover,
+.gk-topbar .nav-masthead .nav-link:focus {
 	background-color: var(--gk-glass-bg-subtle);
 	color: var(--gk-text) !important;
 }
 
-.nav-masthead .nav-link + .nav-link {
-	margin-left: var(--gk-space-1) !important;
-}
-
-.nav-masthead .active {
+.gk-topbar .nav-masthead .active {
 	color: var(--gk-text) !important;
 	background-color: var(--gk-glass-bg) !important;
-	-webkit-backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
-	backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
 	box-shadow: inset 0 0 0 var(--gk-border-width) var(--gk-glass-border-strong);
 }
 
-/* ---------------------------------------------------------------------------
- * Global toolbar (theme + language switcher)
- * ------------------------------------------------------------------------ */
-.gk-toolbar {
-	position: fixed;
-	top: var(--gk-space-3);
-	right: var(--gk-space-4);
-	z-index: 1060;
+/* Right-hand control cluster: theme toggle, language switch, user badge */
+.gk-controls {
 	display: flex;
 	align-items: center;
 	gap: var(--gk-space-2);
-	padding: var(--gk-space-1);
-	border-radius: var(--gk-radius-pill);
-	background-color: var(--gk-glass-bg) !important;
-	border: var(--gk-border-width) solid var(--gk-glass-border);
-	-webkit-backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
-	backdrop-filter: blur(var(--gk-blur)) saturate(var(--gk-saturate));
-	box-shadow: var(--gk-shadow-soft);
+	margin-left: auto;
+	flex-shrink: 0;
+	padding: var(--gk-space-1) 0;
 }
 
 .gk-toolbar-btn {
@@ -479,12 +795,41 @@ html[data-bs-theme="light"] .text-white {
 	box-shadow: inset 0 0 0 var(--gk-border-width) var(--gk-glass-border-strong);
 }
 
-/* User badge is shifted down so it does not overlap the toolbar */
-.gk-user-badge {
-	position: fixed;
-	top: calc(var(--gk-space-3) + 44px);
-	right: var(--gk-space-4);
-	z-index: 1050;
+/* User badge lives inside the top bar; with logout available it doubles as
+   a dropdown toggle ("user menu") */
+.badge.gk-user-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--gk-space-1);
+	background-color: var(--gk-glass-bg-subtle) !important;
+	border: var(--gk-border-width) solid var(--gk-glass-border) !important;
+	color: var(--gk-text) !important;
+	opacity: 1;
+	max-width: 10em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.badge.gk-user-badge.gk-user-menu {
+	cursor: pointer;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.badge.gk-user-badge.gk-user-menu:hover,
+.badge.gk-user-badge.gk-user-menu[aria-expanded="true"] {
+	background-color: var(--gk-glass-bg) !important;
+	border-color: var(--gk-glass-border-strong) !important;
+}
+
+.gk-user-caret {
+	font-size: 0.7em;
+	transition: transform 0.2s ease;
+}
+
+.gk-user-menu[aria-expanded="true"] .gk-user-caret {
+	transform: rotate(180deg);
 }
 
 /* ---------------------------------------------------------------------------
@@ -494,6 +839,114 @@ html[data-bs-theme="light"] .text-white {
 	border-radius: var(--gk-radius-md);
 	/* Keep Bootstrap's horizontal scrolling: do not force overflow here, otherwise
 	   dropdown menus would be clipped on narrow screens */
+}
+
+/* A table nested in a card keeps its inner corners parallel to the card.
+   The cells paint their own backgrounds, so the corner CELLS get the radius.
+   Rounding exists ONLY on the outer frame: top corners on the header row,
+   bottom corners on the last record row — never on individual records.
+   Child combinators keep nested (expandable) tables unaffected. */
+.card-body .table-responsive,
+.card-body div.dataTables_wrapper {
+	border-radius: var(--gk-radius-lg);
+}
+
+.card-body .table-responsive > table.table > thead > tr > th:first-child,
+.card-body .table-responsive > .dataTables_wrapper > table.table > thead > tr > th:first-child {
+	border-top-left-radius: var(--gk-radius-lg);
+}
+
+.card-body .table-responsive > table.table > thead > tr > th:last-child,
+.card-body .table-responsive > .dataTables_wrapper > table.table > thead > tr > th:last-child {
+	border-top-right-radius: var(--gk-radius-lg);
+}
+
+.card-body .table-responsive > table.table > tbody > tr:last-child > td:first-child,
+.card-body .table-responsive > .dataTables_wrapper > table.table > tbody > tr:last-child > td:first-child {
+	border-bottom-left-radius: var(--gk-radius-lg);
+}
+
+.card-body .table-responsive > table.table > tbody > tr:last-child > td:last-child,
+.card-body .table-responsive > .dataTables_wrapper > table.table > tbody > tr:last-child > td:last-child {
+	border-bottom-right-radius: var(--gk-radius-lg);
+}
+
+/* Section rhythm inside cards: every block separated by the same gap */
+.card-body > .table-responsive,
+.card-body > div.dataTables_wrapper {
+	margin-top: var(--gk-space-4);
+}
+
+/* --- DataTables controls (filter / info line) ------------------------------
+ * The auto-generated search input used to keep the browser's default small
+ * radius and clash with the design system. */
+.dataTables_wrapper {
+	color: var(--gk-text);
+}
+
+.dataTables_wrapper .dataTables_filter {
+	color: var(--gk-text-muted);
+	text-align: right;
+	margin-bottom: var(--gk-space-3);
+}
+
+.dataTables_wrapper .dataTables_filter label {
+	color: var(--gk-text-muted);
+	font-size: 0.875rem;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+	display: inline-block;
+	margin-left: var(--gk-space-2);
+	width: 14em;
+	max-width: 60vw;
+	min-height: var(--gk-control-height);
+	padding: var(--gk-space-2) var(--gk-space-3);
+	border: var(--gk-border-width) solid var(--gk-glass-border) !important;
+	/* Match the enlarged radius scale used by the upload widgets */
+	border-radius: var(--gk-radius-md) !important;
+	background-color: var(--gk-glass-bg-subtle) !important;
+	color: var(--gk-text) !important;
+	outline: none;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+	border-color: var(--gk-accent) !important;
+	box-shadow: 0 0 0 0.22rem color-mix(in srgb, var(--gk-accent) 25%, transparent) !important;
+	background-color: var(--gk-glass-bg) !important;
+}
+
+.dataTables_wrapper .dataTables_filter input::placeholder {
+	color: var(--gk-text-muted) !important;
+	opacity: 0.85;
+}
+
+/* The search box and the info line live inside the horizontal scroll
+   container; pin them to the visible edges so they do not scroll away with
+   the middle columns. Sticky can only move an element inside its containing
+   block, so the wrapper itself must span the full (scrolled) table width. */
+.table-responsive .dataTables_wrapper {
+	width: max-content;
+	min-width: 100%;
+}
+
+.table-responsive .dataTables_wrapper .dataTables_filter {
+	position: sticky;
+	right: 0;
+	z-index: 3;
+	float: none;
+	width: fit-content;
+	margin-left: auto;
+}
+
+.table-responsive .dataTables_wrapper .dataTables_info {
+	position: sticky;
+	left: 0;
+	z-index: 3;
+	float: none;
+	width: fit-content;
+	margin-right: auto;
 }
 
 table.table,
@@ -509,6 +962,7 @@ table.table,
 	color: var(--gk-text) !important;
 	border-color: var(--gk-glass-border) !important;
 	padding: var(--gk-space-3) var(--gk-space-3);
+	vertical-align: middle;
 }
 
 .table thead th {
@@ -519,6 +973,13 @@ table.table,
 	border-bottom-color: var(--gk-glass-border-strong) !important;
 }
 
+/* Wide enough for the action button groups to stay on a single line.
+   !important overrides the inline min-width:13em on the template's th.
+   rem (not em) because the th uses a smaller font-size. */
+.table thead th:last-child {
+	min-width: 19rem !important;
+}
+
 .filelist-item {
 	background-color: var(--gk-glass-bg-subtle) !important;
 }
@@ -526,6 +987,63 @@ table.table,
 .filelist-item:hover,
 .filerequest-item:hover > td {
 	background-color: var(--gk-glass-bg) !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * File list tables: single-line rows with pinned first/last columns
+ * - Filename (first) and Actions (last) stay fixed while the middle columns
+ *   scroll horizontally in a strip.
+ * - Every record is exactly one line tall: cells never wrap.
+ * ------------------------------------------------------------------------ */
+.table-responsive .table th,
+.table-responsive .table td {
+	white-space: nowrap;
+}
+
+/* Pinned filename column */
+.table-responsive .table thead th:first-child,
+.table-responsive .table tbody td:first-child {
+	position: sticky;
+	left: 0;
+	z-index: 2;
+	max-width: 18rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	/* Fully opaque: columns scrolled underneath must not bleed through */
+	background-color: var(--gk-sticky-cell-bg) !important;
+	box-shadow: inset -1px 0 0 var(--gk-glass-border-strong);
+}
+
+/* Pinned actions column */
+.table-responsive .table thead th:last-child,
+.table-responsive .table tbody td:last-child {
+	position: sticky;
+	right: 0;
+	z-index: 2;
+	background-color: var(--gk-sticky-cell-bg) !important;
+	box-shadow: inset 1px 0 0 var(--gk-glass-border-strong);
+}
+
+/* Row hover keeps tinting the pinned columns as well */
+.table-responsive .table tbody tr:hover td:first-child,
+.table-responsive .table tbody tr:hover td:last-child {
+	background-color: var(--gk-sticky-cell-bg-hover) !important;
+}
+
+/* While a row's dropdown menu is open, its sticky cell is lifted above all
+   other sticky cells so the fixed menu is not covered by the rows below */
+.table-responsive .gk-menu-open-cell {
+	z-index: 30 !important;
+}
+
+/* DataTables wrapper inherits the glass border instead of floating unstyled */
+div.dataTables_wrapper {
+	color: var(--gk-text);
+}
+
+div.dataTables_info {
+	color: var(--gk-text-muted) !important;
+	padding-top: var(--gk-space-3) !important;
 }
 
 /* ---------------------------------------------------------------------------
@@ -554,6 +1072,7 @@ table.table,
 
 .progress-bar {
 	border-radius: var(--gk-radius-pill) !important;
+	background-color: var(--gk-accent) !important;
 }
 
 .log-dark-input,
@@ -568,6 +1087,15 @@ html[data-bs-theme="light"] .log-dark-input,
 html[data-bs-theme="light"] #logviewer {
 	background-color: rgba(255, 255, 255, 0.75) !important;
 	color: #0b3a5c !important;
+}
+
+/* Light theme would otherwise keep the legacy pitch-black scrollbar */
+html[data-bs-theme="light"] #logviewer::-webkit-scrollbar-track {
+	background: rgba(13, 32, 60, 0.08);
+}
+
+html[data-bs-theme="light"] #logviewer::-webkit-scrollbar-thumb {
+	background: rgba(13, 32, 60, 0.25);
 }
 
 .input-group-text-dark {
@@ -588,9 +1116,99 @@ html[data-bs-theme="light"] #logviewer {
 	padding: var(--gk-space-1) var(--gk-space-3);
 }
 
+/* Alerts share the glass language and use the theme danger colour */
+.alert {
+	border-radius: var(--gk-radius-md) !important;
+	border-width: 0 !important;
+}
+
+.card-body > .alert {
+	margin-bottom: var(--gk-space-4);
+}
+
+.alert-danger {
+	background-color: color-mix(in srgb, var(--gk-danger) 16%, var(--gk-glass-bg)) !important;
+	color: var(--gk-danger) !important;
+}
+
+.alert-warning {
+	background-color: color-mix(in srgb, #f0ad4e 16%, var(--gk-glass-bg)) !important;
+	color: color-mix(in srgb, #f0ad4e 70%, var(--gk-text)) !important;
+}
+
 .callout {
 	border-radius: var(--gk-radius-md);
 	padding: var(--gk-space-5);
+	border-color: var(--gk-glass-border) !important;
+	background-color: var(--gk-glass-bg-subtle);
+}
+
+code, kbd, pre {
+	border-radius: var(--gk-radius-xs);
+}
+
+kbd {
+	padding: 2px 6px;
+}
+
+/* Permission dots on the users page: the legacy yellow is unreadable on the
+   light background */
+html[data-bs-theme="light"] .perm-processing {
+	color: #b58900;
+}
+
+html[data-bs-theme="light"] .perm-granted {
+	color: #1a7f37;
+}
+
+html[data-bs-theme="light"] .perm-notgranted {
+	color: var(--gk-text-muted);
+}
+
+/* Upload option cards: legacy hardcoded greys follow the theme tokens */
+.upload-options-section-label {
+	color: var(--gk-text-muted) !important;
+}
+
+.upload-option-icon {
+	color: var(--gk-accent) !important;
+}
+
+.upload-option-label {
+	color: var(--gk-text-muted) !important;
+}
+
+.upload-option-card:has(.upload-option-toggle:checked) {
+	border-color: var(--gk-accent) !important;
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--gk-accent) 35%, transparent) !important;
+}
+
+.upload-option-suffix {
+	background-color: var(--gk-glass-bg-subtle) !important;
+	border-color: var(--gk-glass-border) !important;
+	color: var(--gk-text-muted) !important;
+}
+
+/* The legacy spinner is inverted for the dark theme; undo that on light */
+html[data-bs-theme="light"] .upload-option-card input[type="number"]::-webkit-inner-spin-button {
+	filter: none;
+}
+
+/* Public upload progress bars follow the accent colour */
+.pu-file-item progress {
+	background-color: var(--gk-glass-bg-subtle);
+}
+
+.pu-file-item progress::-webkit-progress-bar {
+	background-color: var(--gk-glass-bg-subtle);
+}
+
+.pu-file-item progress::-webkit-progress-value {
+	background-color: var(--gk-accent);
+}
+
+.pu-file-item progress::-moz-progress-bar {
+	background-color: var(--gk-accent);
 }
 
 /* ---------------------------------------------------------------------------
@@ -601,13 +1219,147 @@ html[data-bs-theme="light"] #logviewer {
 		--gk-surface-padding: var(--gk-space-4);
 	}
 
-	.gk-toolbar {
-		top: var(--gk-space-2);
-		right: var(--gk-space-2);
+	/* --- Top bar: brand + controls on row 1, nav links scroll on row 2 --- */
+	.gk-topbar {
+		padding: var(--gk-space-2) var(--gk-space-3);
+	}
+
+	.gk-brand {
+		font-size: 1.1rem;
+	}
+
+	.gk-brand i {
+		font-size: 1.15rem;
+	}
+
+	.gk-topbar .nav-masthead {
+		order: 3;
+		flex-basis: 100%;
+		justify-content: flex-start;
+		/* Edge-to-edge scroll row, aligned with the bar padding */
+		margin: 0 calc(-1 * var(--gk-space-3));
+		padding: 0 var(--gk-space-3) var(--gk-space-1);
 	}
 
 	.gk-lang-link {
 		padding: 4px var(--gk-space-2);
 		font-size: 0.72rem;
+	}
+
+	.gk-controls {
+		gap: var(--gk-space-1);
+	}
+
+	/* Keep the badge but let it shrink instead of pushing the bar apart */
+	.badge.gk-user-badge {
+		max-width: 6.5em;
+		padding: var(--gk-space-1) var(--gk-space-2);
+	}
+
+	/* --- Cards ---------------------------------------------------------- */
+	/* Inline card widths (width: 80% / 50% / 20em ...) waste half the screen
+	   on phones; the stylesheet !important beats the inline attribute */
+	.card {
+		width: 100% !important;
+	}
+
+	.upload-box {
+		padding: var(--gk-space-5) var(--gk-space-4) !important;
+	}
+
+	/* --- Tables / search ------------------------------------------------ */
+	.dataTables_wrapper .dataTables_filter {
+		text-align: left;
+	}
+
+	.dataTables_wrapper .dataTables_filter input {
+		width: 220px;
+		max-width: 60vw;
+		margin-left: 0;
+	}
+
+	.dataTables_wrapper .dataTables_filter label {
+		display: block;
+		margin-bottom: var(--gk-space-1);
+	}
+
+	/* Stacked buttons in table rows keep their breathing room */
+	.table .btn-toolbar {
+		justify-content: center !important;
+	}
+
+	/* --- File table pinned columns on phones --------------------------------
+	   The two pinned columns must stay compact so the scrollable middle strip
+	   keeps usable width; buttons never wrap (single-line rows). */
+	.table thead th:last-child {
+		min-width: 14rem !important;
+	}
+
+	.table .btn-toolbar {
+		flex-wrap: nowrap;
+	}
+
+	.table .btn-sm {
+		padding: 2px 4px !important;
+	}
+
+	.table .btn-group {
+		gap: 2px;
+	}
+
+	.table .btn-group > .dropdown-toggle-split {
+		padding-left: 2px;
+		padding-right: 2px;
+	}
+
+	.table-responsive .table thead th:first-child,
+	.table-responsive .table tbody td:first-child {
+		max-width: 9rem;
+	}
+}
+
+/* Very narrow screens (phone portrait, ~<= 420px) */
+@media (max-width: 420px) {
+	/* Composite modal input rows (checkbox + label + field) would overflow */
+	.modal-samesize-input-edit {
+		width: 8.5rem;
+	}
+
+	.modal-samesize-input-filerequest {
+		width: 6rem;
+	}
+
+	.modal-header,
+	.modal-footer {
+		padding: var(--gk-space-3) var(--gk-space-4);
+		flex-wrap: wrap;
+		gap: var(--gk-space-2);
+	}
+
+	.modal-footer > .btn {
+		flex: 1 1 auto;
+	}
+
+	.gk-brand span {
+		font-size: 1rem;
+	}
+
+	.btn-lg {
+		padding: var(--gk-space-2) var(--gk-space-4);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.btn,
+	.stat-card,
+	.gk-toolbar-btn,
+	.nav-masthead .nav-link,
+	.upload-box {
+		transition: none;
+	}
+
+	.btn:hover:not(:disabled):not(.disabled),
+	.stat-card:hover {
+		transform: none;
 	}
 }

@@ -84,7 +84,7 @@ func Load() {
 		save()
 	}
 	if serverSettings.PublicName == "" {
-		serverSettings.PublicName = "Gokapi"
+		serverSettings.PublicName = "GrokFiler"
 	}
 	if serverSettings.MaxParallelUploads == 0 {
 		serverSettings.MaxParallelUploads = 4

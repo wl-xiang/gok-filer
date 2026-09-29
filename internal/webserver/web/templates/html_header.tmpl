@@ -29,14 +29,7 @@
 	<link  href="./assets/dist/css/datatables.min.css" rel="stylesheet">
 	<link  href="./assets/dist/css/flatpickr.min.css" rel="stylesheet">
 	<link  href="./assets/dist/css/flatpickr.dark.min.css" rel="stylesheet">
-	<style>
-		.masthead-brand {
-			float: left;
-		}
-		.nav-masthead {
-			float: right;
-		}
-	</style>
+	<!-- Unified top bar layout is handled by ./css/theme.css (.gk-topbar) -->
     {{ if .CustomContent.UseCustomCss }}
 	<link  href="./custom/custom.v{{.CustomContent.Version}}.css" rel="stylesheet">
     {{ end }}
@@ -68,58 +61,68 @@
 {{end}}
   </head>
   <body class="d-flex h-100 text-center">
-<!-- Global toolbar: theme switcher and language switcher, available on every rendered page -->
-<div id="gk-toolbar" class="gk-toolbar" role="group" aria-label="{{ tr "common.language" }}">
-  <button type="button" id="gk-theme-toggle" class="gk-toolbar-btn" onclick="gokapiToggleTheme()"
-          title="{{ tr "common.toggleTheme" }}" aria-label="{{ tr "common.toggleTheme" }}">
-    <i class="bi bi-moon-stars-fill" id="gk-theme-icon" aria-hidden="true"></i>
-  </button>
-  <div class="gk-lang-switch">
-    {{ $current := currentLanguage }}
-    {{ range availableLanguages }}
-    <a class="gk-lang-link {{ if eq .Code $current }}active{{ end }}" href="./setLanguage?lang={{ .Code }}"
-       title="{{ .Name }}" lang="{{ .Code }}">{{ .Name }}</a>
-    {{ end }}
-  </div>
-</div>
-{{ if .IsAdminView }}
-   {{ if .IsUserTabAvailable }}
-<div class="gk-user-badge">
-  <span class="badge bg-secondary opacity-75">
-    <i class="bi bi-person-fill"></i> {{.ActiveUser.Name}}
-  </span>
-</div>
-  {{ end }}
   <div class="d-flex w-100 h-100 p-3 mx-auto flex-column">
-      <header class="masthead mb-auto">
-        <div  style="max-width: 80em;  margin: 0 auto;"  class="inner">
-          <h1>{{.PublicName}}</h1>
-          <nav class="nav nav-masthead justify-content-center">
-            <a class="nav-link {{ if eq .ActiveView 0}}active{{ end }}" href="./admin">{{ tr "nav.upload" }}</a>
-            {{ if .ActiveUser.HasPermissionCreateFileRequests }}
-            <a class="nav-link {{ if eq .ActiveView 4 }}active{{ end }}" href="./filerequests">{{ tr "nav.fileRequests" }}</a>
-            {{ end }}
-            {{ if and .ActiveUser.HasPermissionManageUsers .IsUserTabAvailable }}
-            <a class="nav-link {{ if eq .ActiveView 3 }}active{{ end }}" href="./users">{{ tr "nav.users" }}</a>
-            {{ end }}
-            {{ if .ShowApiMenu }}
-            <a class="nav-link {{ if eq .ActiveView 2 }}active{{ end }}" href="./apiKeys">{{ tr "nav.api" }}</a>
-            {{ end }}
-            {{ if .ActiveUser.HasPermissionManageLogs }}
-            <a class="nav-link {{ if eq .ActiveView 1 }}active{{ end }}" href="./logs">{{ tr "nav.status" }}</a>
-            {{ end }}
-            {{ if .IsLogoutAvailable }}<a class="nav-link" href="#" onclick="doLogout()">{{ tr "nav.logout" }}</a>{{ end }}
-          </nav>
-        </div>
-      </header>
+<!-- Unified top bar: brand (left), page navigation (center), theme + language switcher and user badge (right) -->
+<header class="gk-topbar">
+  <div class="gk-topbar-inner">
+    <a class="gk-brand" href="./index" title="{{.PublicName}}">
+      <i class="bi bi-archive-fill" aria-hidden="true"></i>
+      <span>{{.PublicName}}</span>
+    </a>
+{{ if .IsAdminView }}
+    <nav class="nav nav-masthead" aria-label="Main navigation">
+      <a class="nav-link {{ if eq .ActiveView 0}}active{{ end }}" href="./admin">{{ tr "nav.upload" }}</a>
+      {{ if .ActiveUser.HasPermissionCreateFileRequests }}
+      <a class="nav-link {{ if eq .ActiveView 4 }}active{{ end }}" href="./filerequests">{{ tr "nav.fileRequests" }}</a>
+      {{ end }}
+      {{ if and .ActiveUser.HasPermissionManageUsers .IsUserTabAvailable }}
+      <a class="nav-link {{ if eq .ActiveView 3 }}active{{ end }}" href="./users">{{ tr "nav.users" }}</a>
+      {{ end }}
+      {{ if .ShowApiMenu }}
+      <a class="nav-link {{ if eq .ActiveView 2 }}active{{ end }}" href="./apiKeys">{{ tr "nav.api" }}</a>
+      {{ end }}
+      {{ if .ActiveUser.HasPermissionManageLogs }}
+      <a class="nav-link {{ if eq .ActiveView 1 }}active{{ end }}" href="./logs">{{ tr "nav.status" }}</a>
+      {{ end }}
+    </nav>
+{{ end }}
+    <div id="gk-toolbar" class="gk-controls" role="group" aria-label="{{ tr "common.language" }}">
+      <button type="button" id="gk-theme-toggle" class="gk-toolbar-btn" onclick="gokapiToggleTheme()"
+              title="{{ tr "common.toggleTheme" }}" aria-label="{{ tr "common.toggleTheme" }}">
+        <i class="bi bi-moon-stars-fill" id="gk-theme-icon" aria-hidden="true"></i>
+      </button>
+      <div class="gk-lang-switch">
+        {{ $current := currentLanguage }}
+        {{ range availableLanguages }}
+        <a class="gk-lang-link {{ if eq .Code $current }}active{{ end }}" href="./setLanguage?lang={{ .Code }}"
+           title="{{ .Name }}" lang="{{ .Code }}">{{ .Name }}</a>
+        {{ end }}
+      </div>
+{{ if .IsAdminView }}
+      <!-- User badge doubles as a dropdown toggle: logout lives here instead of the nav bar -->
+      <div class="dropdown gk-user-dropdown">
+        <span class="badge gk-user-badge {{ if .IsLogoutAvailable }}gk-user-menu{{ end }}" title="{{.ActiveUser.Name}}"
+              {{ if .IsLogoutAvailable }}role="button" data-bs-toggle="dropdown" data-bs-offset="0,8" aria-expanded="false"{{ end }}>
+          <i class="bi bi-person-fill" aria-hidden="true"></i> {{.ActiveUser.Name}}
+          {{ if .IsLogoutAvailable }}<i class="bi bi-chevron-down gk-user-caret" aria-hidden="true"></i>{{ end }}
+        </span>
+  {{ if .IsLogoutAvailable }}
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" href="#" onclick="doLogout()">
+              <i class="bi bi-box-arrow-right" aria-hidden="true"></i> {{ tr "nav.logout" }}
+            </a>
+          </li>
+        </ul>
+  {{ end }}
+      </div>
+{{ end }}
+    </div>
+  </div>
+</header>
+{{ if .IsAdminView }}
   <main style="margin-top: 2rem">
 {{ else }}
-  <div class="d-flex w-100 h-100 p-3 mx-auto flex-column">
-  <header class="mb-auto">
-    <div>
-      <h1><a href="/index" style="text-decoration: none;display: block;">{{.PublicName}}</a></h1>
-    </div>
-  </header>
-  <main>
+  <main class="my-auto">
 {{ end }}
 {{end}}

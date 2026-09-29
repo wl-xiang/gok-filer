@@ -2,8 +2,6 @@ name: Build Core Docker - Release
 
 on:
   workflow_dispatch:
-  release:
-    types: [released]
 
 permissions:
   contents: read

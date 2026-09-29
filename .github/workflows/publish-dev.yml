@@ -2,9 +2,6 @@ name: Build Core Docker - Custom Dev
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
 
 permissions:
   contents: read

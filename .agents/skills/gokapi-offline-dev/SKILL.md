@@ -138,6 +138,17 @@ python scripts/check-i18n-keys.py <repo-root>
 - `.card-body` 的 `padding` **不要加 `!important`**，否则会覆盖 `p-3` / `p-5` 工具类。
 - `theme.css` 的 `background.jpg` 相对路径是 `../assets/background.jpg`（文件在 `static/css/`，图在 `static/assets/`）。
 - 主题切换按钮的图标用 `id="gk-theme-icon"`，`theme.js` 会改它的 className。
+- **按钮组贴合问题**：theme.css 给所有 `.btn` 强制圆角后，Bootstrap `.btn-group` 的 -1px 负 margin + 压平圆角会失效，按钮呈「熔接」状。修法（2026-09-29 已落地）：`.btn-group { gap }` + `.btn-group > .btn { margin-left/right: 0 !important }` + 组内全部用 `--gk-radius-xs`，`.btn-toolbar` 用 `--gk-tool-gap`。
+- **旧模板里的结构性 `<br>`**：大量模板直接在 `.card-body` 下用 `<br>` 排版，用 `.card-body > br { display:none }`（只隐藏直接子级，段落内的换行 br 保留）+ `.card-title/.card-text` 统一 margin 补偿。
+- 管理页头部布局已从 `html_header.tmpl` 的 float 内联样式改为 theme.css 的 `.masthead .inner` flex 布局（换行/移动端居中）。
+- `.card` 上的内联 `style="width: 80%"` 之类在移动端用 `@media (max-width:767px) .card { width:100% !important }` 覆盖（样式表 !important 可胜过内联非 important 声明）。
+- **统一顶栏（2026-09-29 晚）**：`html_header.tmpl` 已重构为单个 `.gk-topbar`（sticky、负 margin 抵消 p-3 实现通栏）：品牌 `.gk-brand` 居左 + `.nav-masthead` 居中 + `#gk-toolbar.gk-controls`（主题/语言/用户徽章）居右。测试依赖 `id="gk-toolbar"`、`id="gk-theme-toggle"`、`class="gk-lang-link active"`，重构时必须保留。移动端 nav `order:3; flex-basis:100%` 横向滚动。
+- **表头 min-width 的坑**：`th` 字号是 0.78rem，`min-width: 17em` 实际只有 ~230px；要让操作列按钮单行需用 `min-width: 19rem !important`（!important 才能压过模板 th 上的内联 min-width）。
+- 系统名 `PublicName`：默认值在 `internal/configuration/Configuration.go`（现为 GrokFiler），运行实例在 `gokapi-config/config.json`；页脚 `html_footer.tmpl` 里的名字是硬编码（footer 拿不到 view 上下文），改品牌要三处同步。
+- **退出登录在用户下拉里**（不在导航栏）：`.gk-user-menu`（badge）是 Bootstrap dropdown toggle。**坑**：disabled 表单控件会整体吞掉 click 事件（不冒泡到 document），Bootstrap「点外部关闭」收不到通知导致菜单挂住——`theme.js` 里用 mousedown 捕获阶段兜底关闭（`bootstrap.Dropdown.getOrCreateInstance(toggle).hide()`），Escape 同理加捕获监听。诊断手段：`elementFromPoint(x,y)` + `Dropdown.getInstance(toggle)._config.autoClose`。
+- 导航链接靠左、品牌居左：`.gk-topbar .nav-masthead { flex: 0 1 auto; justify-content: flex-start }`。
+- **横向滚动容器里固定搜索框**：DataTables 的 `.dataTables_filter`/`.dataTables_info` 在 `.table-responsive` 滚动容器内会跟着滚。sticky 钉边的前提是**包含块必须够宽**——wrapper 默认只有可视区宽，sticky 无移动空间；先 `.table-responsive .dataTables_wrapper { width: max-content; min-width: 100% }`，再对 filter 用 `position:sticky; right:0; width:fit-content; margin-left:auto`（info 对称用 left:0）。诊断法：`getBoundingClientRect()` 对比 filter 右缘与 scroller 右缘。
+- **表格内下拉菜单被裁剪**：`.table-responsive` 的 overflow-x:auto 会连带纵向裁剪，最后一行的下拉菜单被切。方案：theme.js 用 **click 事件委托**（`[data-bs-toggle='dropdown']` + closest('.table-responsive')）+ `setTimeout(0)` 后把菜单改为 `position:fixed`（相对卡片定位——`.card` 的 backdrop-filter 是 fixed 的 containing block，坐标用 `cardRect` 换算），fixed 元素可脱离滚动容器裁剪。**教训**：Bootstrap 的 `shown.bs.dropdown` 等自定义事件在冒泡阶段监听收不到（合成事件 bubbles:true 能收到，导致调试误判）；换成 click 委托 100% 可靠。另配 scroll 捕获监听：表格滚动时立即关闭菜单（fixed 菜单不随表格移动）。
 
 ## 5. 一键验证清单
 
